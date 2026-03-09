@@ -24,10 +24,16 @@ public class ProductListItemDto {
     public String categoryName;
 
     @Description("Starting price for the selected category")
-    public BigDecimal price;
+    public BigDecimal retailPrice;
 
     @Description("Starting sale price for the selected category")
-    public BigDecimal salesPrice;
+    public BigDecimal retailSalesPrice;
+
+    @Description("Starting price for the selected category")
+    public BigDecimal wholesalePrice;
+
+    @Description("Starting sale price for the selected category")
+    public BigDecimal wholesaleSalesPrice;
 
     @Description("Product images (structured objects)")
     public List<ProductImageDto> productImages;
@@ -37,14 +43,17 @@ public class ProductListItemDto {
 
     public ProductListItemDto() {}
 
-    public ProductListItemDto(String id, String name, String description, BigDecimal price,
-                             BigDecimal salesPrice, List<ProductImageDto> productImages,
+    public ProductListItemDto(String id, String name, String description, BigDecimal retailPrice,
+                             BigDecimal retailSalesPrice, BigDecimal wholesalePrice,
+                              BigDecimal wholesaleSalesPrice, List<ProductImageDto> productImages,
                              List<String> variantIds, String categoryName) {
         this.id = id;
         this.name = name;
         this.description = description;
-        this.price = price;
-        this.salesPrice = salesPrice;
+        this.retailPrice = retailPrice;
+        this.retailSalesPrice = retailSalesPrice;
+        this.wholesalePrice = wholesalePrice;
+        this.wholesaleSalesPrice = wholesaleSalesPrice;
         this.productImages = productImages;
         this.variantIds = variantIds;
         this.categoryName = categoryName;
