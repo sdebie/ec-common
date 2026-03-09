@@ -4,6 +4,7 @@ import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * DTO that represents a single product variant (variant-specific information only).
@@ -16,8 +17,8 @@ public class ProductVariantDto {
     @Description("SKU of the variant")
     public String sku;
 
-    @Description("Price of the variant")
-    public BigDecimal price;
+    @Description("Prices for this variant (organized by price type and customer type)")
+    public List<VariantPriceDto> prices;
 
     @Description("Stock quantity available")
     public Integer stockQuantity;
@@ -30,11 +31,11 @@ public class ProductVariantDto {
 
     public ProductVariantDto() {}
 
-    public ProductVariantDto(String id, String sku, BigDecimal price, Integer stockQuantity,
+    public ProductVariantDto(String id, String sku, List<VariantPriceDto> prices, Integer stockQuantity,
                              String attributesJson, BigDecimal weightKg) {
         this.id = id;
         this.sku = sku;
-        this.price = price;
+        this.prices = prices;
         this.stockQuantity = stockQuantity;
         this.attributesJson = attributesJson;
         this.weightKg = weightKg;

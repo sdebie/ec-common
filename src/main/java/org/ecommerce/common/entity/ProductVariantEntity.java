@@ -3,6 +3,8 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.ecommerce.common.enums.CustomerTypeEn;
+import org.ecommerce.common.enums.PriceTypeEn;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -25,8 +27,8 @@ public class ProductVariantEntity extends PanacheEntityBase {
     @Column(nullable = false, unique = true)
     public String sku;
 
-    @Column(nullable = false, precision = 12, scale = 2)
-    public BigDecimal price;
+    @OneToMany(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    public List<VariantPricesEntity> variantPrices = Collections.emptyList();
 
     @Column(name = "stock_quantity")
     public Integer stockQuantity;
@@ -57,4 +59,5 @@ public class ProductVariantEntity extends PanacheEntityBase {
         if (productId == null) return Collections.emptyList();
         return list("select v from ProductVariantEntity v left join fetch v.product where v.product.id = ?1 order by v.id asc", productId);
     }
+
 }

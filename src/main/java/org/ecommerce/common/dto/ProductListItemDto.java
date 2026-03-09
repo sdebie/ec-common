@@ -3,6 +3,7 @@ package org.ecommerce.common.dto;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -22,8 +23,11 @@ public class ProductListItemDto {
     @Description("Category Name")
     public String categoryName;
 
-    @Description("Minimum variant price for the product")
-    public Double price; // using Double for simplicity in GraphQL schema
+    @Description("Starting price for the selected category")
+    public BigDecimal price;
+
+    @Description("Starting sale price for the selected category")
+    public BigDecimal salesPrice;
 
     @Description("Product images (structured objects)")
     public List<ProductImageDto> productImages;
@@ -33,11 +37,14 @@ public class ProductListItemDto {
 
     public ProductListItemDto() {}
 
-    public ProductListItemDto(String id, String name, String description, Double price, List<ProductImageDto> productImages, List<String> variantIds, String categoryName) {
+    public ProductListItemDto(String id, String name, String description, BigDecimal price,
+                             BigDecimal salesPrice, List<ProductImageDto> productImages,
+                             List<String> variantIds, String categoryName) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.price = price;
+        this.salesPrice = salesPrice;
         this.productImages = productImages;
         this.variantIds = variantIds;
         this.categoryName = categoryName;
