@@ -2,40 +2,50 @@ package org.ecommerce.common.dto;
 
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
+import org.ecommerce.common.entity.ProductEntity;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
-/**
- * DTO that represents a single product variant (variant-specific information only).
- */
 @Type
 public class ProductVariantDto {
-    @Description("Variant ID (UUID as string)")
+
+    @Description("Product Variant ID (UUID as string)")
     public String id;
 
-    @Description("SKU of the variant")
+    public BigDecimal retailPrice;
+    public BigDecimal retailSalesPrice;
+    public BigDecimal wholesalePrice;
+    public BigDecimal wholesaleSalesPrice;
+
+    public ProductEntity product;
     public String sku;
-
-    @Description("Prices for this variant (organized by price type and customer type)")
-    public List<VariantPriceDto> prices;
-
-    @Description("Stock quantity available")
+    public List<VariantPriceDto> variantPrices = Collections.emptyList();
     public Integer stockQuantity;
-
-    @Description("Attributes as JSON string")
     public String attributesJson;
-
-    @Description("Weight in kilograms")
     public BigDecimal weightKg;
 
     public ProductVariantDto() {}
 
-    public ProductVariantDto(String id, String sku, List<VariantPriceDto> prices, Integer stockQuantity,
-                             String attributesJson, BigDecimal weightKg) {
+    public ProductVariantDto(String id, BigDecimal retailPrice, BigDecimal retailSalesPrice, BigDecimal wholesalePrice, BigDecimal wholesaleSalesPrice, ProductEntity product, String sku, List<VariantPriceDto> variantPrices, Integer stockQuantity, String attributesJson, BigDecimal weightKg) {
+        this.id = id;
+        this.retailPrice = retailPrice;
+        this.retailSalesPrice = retailSalesPrice;
+        this.wholesalePrice = wholesalePrice;
+        this.wholesaleSalesPrice = wholesaleSalesPrice;
+        this.product = product;
+        this.sku = sku;
+        this.variantPrices = variantPrices;
+        this.stockQuantity = stockQuantity;
+        this.attributesJson = attributesJson;
+        this.weightKg = weightKg;
+    }
+
+    public ProductVariantDto(String id, String sku, List<VariantPriceDto> variantPrices, Integer stockQuantity, String attributesJson, BigDecimal weightKg) {
         this.id = id;
         this.sku = sku;
-        this.prices = prices;
+        this.variantPrices = variantPrices;
         this.stockQuantity = stockQuantity;
         this.attributesJson = attributesJson;
         this.weightKg = weightKg;
