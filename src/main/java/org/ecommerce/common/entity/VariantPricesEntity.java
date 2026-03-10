@@ -33,7 +33,7 @@ public class VariantPricesEntity extends PanacheEntityBase {
     public ProductVariantEntity variant;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "pricetype", nullable = false)
+    @Column(name = "price_type", nullable = false)
     public PriceTypeEn priceType;
 
     @Column(nullable = false, precision = 12, scale = 2)
