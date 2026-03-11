@@ -26,6 +26,12 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
     @Column(name = "wholesale_price")
     public BigDecimal wholesalePrice;
 
+    @Column(name = "retail_sale_price")
+    public BigDecimal retailSalePrice;
+
+    @Column(name = "wholesale_sale_price")
+    public BigDecimal wholesaleSalePrice;
+
     @Column(name = "category_name")
     public String categoryName;
 

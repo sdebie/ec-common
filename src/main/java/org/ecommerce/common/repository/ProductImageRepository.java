@@ -15,7 +15,7 @@ public class ProductImageRepository implements PanacheRepository<ProductImageEnt
      */
     public List<ProductImageEntity> findByProductId(UUID productId)
     {
-        return list("product.id = ?1 ORDER BY sortOrder ASC", productId);
+        return list("productVariant.product.id = ?1 ORDER BY sortOrder ASC", productId);
     }
 
     /**
@@ -23,7 +23,7 @@ public class ProductImageRepository implements PanacheRepository<ProductImageEnt
      */
     public ProductImageEntity findFeaturedByProductId(UUID productId)
     {
-        return find("product.id = ?1 AND isFeatured = true", productId).firstResult();
+        return find("productVariant.product.id = ?1 AND isFeatured = true", productId).firstResult();
     }
 
     /**
@@ -32,10 +32,9 @@ public class ProductImageRepository implements PanacheRepository<ProductImageEnt
     public void setFeaturedImage(UUID productId, UUID imageId)
     {
         // Unfeature all images for this product
-        update("isFeatured = false WHERE product.id = ?1", productId);
+        update("isFeatured = false WHERE productVariant.product.id = ?1", productId);
 
         // Feature the specific image
-        update("isFeatured = true WHERE id = ?1 AND product.id = ?2", imageId, productId);
+        update("isFeatured = true WHERE id = ?1 AND productVariant.product.id = ?2", imageId, productId);
     }
 }
-

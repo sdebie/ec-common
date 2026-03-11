@@ -16,8 +16,8 @@ public class ProductImageEntity extends PanacheEntityBase {
     public UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false)
-    public ProductEntity product;
+    @JoinColumn(name = "variant_id", nullable = false)
+    public ProductVariantEntity productVariant;
 
     @Column(name = "image_url", nullable = false)
     public String imageUrl;
@@ -28,4 +28,3 @@ public class ProductImageEntity extends PanacheEntityBase {
     @Column(name = "is_featured")
     public Boolean isFeatured;
 }
-

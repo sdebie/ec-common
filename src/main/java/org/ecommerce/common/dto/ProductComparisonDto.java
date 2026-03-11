@@ -15,8 +15,14 @@ public class ProductComparisonDto {
     public BigDecimal currentRetailPrice;
     public BigDecimal proposedRetailPrice;
 
+    public BigDecimal currentRetailSalePrice;
+    public BigDecimal proposedRetailSalePrice;
+
     public BigDecimal currentWholesalePrice;
     public BigDecimal proposedWholesalePrice;
+
+    public BigDecimal currentWholesaleSalePrice;
+    public BigDecimal proposedWholesaleSalePrice;
 
     public boolean isNewProduct;
     public boolean hasChanges;
