@@ -2,6 +2,7 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -66,7 +67,8 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
     public String imageErrors;
 
     @Column(name = "validation_status")
-    public String validationStatus;
+    @Enumerated(EnumType.STRING)
+    public ProductImportValidationStatusEn validationStatus;
 
     @Column(name="has_changes")
     public Boolean hasChanges;

@@ -1,8 +1,9 @@
 package org.ecommerce.common.enums;
 
 public enum ProductUploadStatusEn {
+    IMPORTING,
     PENDING,
-    APPROVED,
-    REJECTED,
-    APPLIED
+    PROCESSING,
+    FAILED,
+    PROCESSED
 }

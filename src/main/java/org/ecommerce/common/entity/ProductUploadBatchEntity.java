@@ -27,6 +27,15 @@ public class ProductUploadBatchEntity extends PanacheEntityBase {
     @Column(name="total_rows")
     public Integer totalRows;
 
+    @Column(name="processed_rows")
+    public Integer processedRows = 0;
+
+    @Column(name="skipped_rows")
+    public Integer skippedRows = 0;
+
+    @Column(name="validation_error_count")
+    public Integer validationErrorCount = 0;
+
     @Column(name="created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
 }

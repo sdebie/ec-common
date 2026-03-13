@@ -8,6 +8,9 @@ public class ProductUploadBatchDto {
     public String filename;
     public String status;
     public Integer totalRows;
+    public Integer processedRows;
+    public Integer skippedRows;
+    public Integer validationErrorCount;
     public LocalDateTime createdAt;
     public String uploadedByUsername;
 }

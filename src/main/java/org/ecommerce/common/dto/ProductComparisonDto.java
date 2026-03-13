@@ -1,10 +1,11 @@
 package org.ecommerce.common.dto;
 
-import jakarta.persistence.Column;
+import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@SuppressWarnings("unused")
 public class ProductComparisonDto {
     public UUID stagedId;
     public String sku;
@@ -19,7 +20,7 @@ public class ProductComparisonDto {
     public String currentAttributes;
     public String proposedAttributes;
     public String validationErrors;
-    public String validationStatus;
+    public ProductImportValidationStatusEn validationStatus;
     public String imageErrors;
 
     // Name comparison
