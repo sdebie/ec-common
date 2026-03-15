@@ -31,6 +31,9 @@ public class ProductEntity extends PanacheEntityBase {
     @Column(columnDefinition = "TEXT")
     public String description;
 
+    @Column(name="short_description", columnDefinition = "TEXT")
+    public String shorDescription;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "product_type")
     public ProductTypeEn productType; // SIMPLE or VARIABLE

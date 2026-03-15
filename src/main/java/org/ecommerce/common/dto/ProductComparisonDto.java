@@ -27,6 +27,11 @@ public class ProductComparisonDto {
     public String currentName;
     public String proposedName;
 
+    public String currentDescription;
+    public String proposedDescription;
+    public String currentShortDescription;
+    public String proposedShortDescription;
+
     // Price comparison
     public BigDecimal currentRetailPrice;
     public BigDecimal proposedRetailPrice;
