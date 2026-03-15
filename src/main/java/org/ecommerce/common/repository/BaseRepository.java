@@ -13,8 +13,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static org.ecommerce.common.enums.FilterOperators.EQUALS;
-
 public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, ID>
 {
     protected abstract Map<String, String> getAllowedFields();
