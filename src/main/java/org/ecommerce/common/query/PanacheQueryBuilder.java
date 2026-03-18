@@ -10,8 +10,8 @@ import java.util.*;
 public class PanacheQueryBuilder
 {
     private final FilterRequest filterRequest;
-    private List<String> whereClauses = new ArrayList<>();
-    private Map<String, Object> paramMap = new LinkedHashMap<>();
+    private final List<String> whereClauses = new ArrayList<>();
+    private final Map<String, Object> paramMap = new LinkedHashMap<>();
 
     // unique param name counter
     private int seq = 0;

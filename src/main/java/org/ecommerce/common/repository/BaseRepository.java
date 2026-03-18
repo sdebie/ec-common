@@ -15,28 +15,32 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
 
         PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
         PanacheQuery<T> query;
-        if (!queryBuilder.hasQuery()) {
+
+        if (queryBuilder.hasQuery()) {
             query = findAll(queryBuilder.sort());
         } else if (queryBuilder.hasParams()) {
             query = find(queryBuilder.query(), queryBuilder.sort(), queryBuilder.params());
+
         } else {
             // Query string with no bound params — e.g. "active IS NOT NULL"
             query = find(queryBuilder.query(), queryBuilder.sort());
-        }
 
+        }
         query.page(queryBuilder.page(pageRequest));
         return query.list();
     }
 
     public long count(FilterRequest filterRequest)
     {
-        PanacheQueryBuilder b = PanacheQueryBuilder.from(filterRequest);
-        if (!b.hasQuery()) {
+        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+
+        if (queryBuilder.hasQuery()) {
             return count();
         }
-        if (b.hasParams()) {
-            return count(b.query(), b.params());
+
+        if (queryBuilder.hasParams()) {
+            return count(queryBuilder.query(), queryBuilder.params());
         }
-        return count(b.query());
+        return count(queryBuilder.query());
     }
 }
