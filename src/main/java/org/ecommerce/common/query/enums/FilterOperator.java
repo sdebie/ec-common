@@ -1,6 +1,6 @@
-package org.ecommerce.common.enums;
+package org.ecommerce.common.query.enums;
 
-public enum FilterOperators
+public enum FilterOperator
 {
     EQUALS,
     NOT_EQUALS,
@@ -11,7 +11,10 @@ public enum FilterOperators
     IN,
     NOT_IN,
     LIKE,
+    ILIKE,
+    NOT_LIKE,
     IS_NULL,
     IS_NOT_NULL,
-    NOT_LIKE
+    BETWEEN,
+    NOT_BETWEEN,
 }

@@ -1,4 +1,4 @@
-package org.ecommerce.common.enums;
+package org.ecommerce.common.query.enums;
 
 public enum LogicalOperator
 {
