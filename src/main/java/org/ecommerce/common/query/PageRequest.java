@@ -15,7 +15,7 @@ public class PageRequest
         return pageIndex * pageSize;
     }
 
-    public void setPage(int pageIndex)
+    public void setPageIndex(int pageIndex)
     {
         this.pageIndex = Math.max(0, pageIndex);
     }
