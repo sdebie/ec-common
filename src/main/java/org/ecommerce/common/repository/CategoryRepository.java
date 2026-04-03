@@ -9,7 +9,7 @@ import java.util.UUID;
 @ApplicationScoped
 public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
 {
-    // returns all the sub-categories
+    // returns all the subcategories
     public List<CategoryEntity> findSubCategoriesByParentId(Long parentId)
     {
         return list("parent.id", parentId);
