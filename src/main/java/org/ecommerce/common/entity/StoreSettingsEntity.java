@@ -8,7 +8,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "store_settings")
-public class StoreSettingEntity extends PanacheEntityBase {
+public class StoreSettingsEntity extends PanacheEntityBase {
     @Id
     @Column(name = "setting_key")
     public String key;
