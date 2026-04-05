@@ -34,7 +34,7 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     /**
      * Fetch all variants for a given product together with the parent Product entity.
      */
-    public List<ProductVariantEntity> findByProductIdWithProduct(UUID productId)
+    public List<ProductVariantEntity> findByVariantsForProductId(UUID productId)
     {
         if (productId == null) return Collections.emptyList();
         return list(
@@ -50,7 +50,7 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     {
         if (productId == null) return BigDecimal.ZERO;
 
-        List<ProductVariantEntity> variants = findByProductIdWithProduct(productId);
+        List<ProductVariantEntity> variants = findByVariantsForProductId(productId);
         return variants.stream()
                 .flatMap(v -> v.variantPrices.stream())
                 .filter(p -> p.priceType.equals(priceType) && p.isActive())
