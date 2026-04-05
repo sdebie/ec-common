@@ -6,6 +6,7 @@ import org.ecommerce.common.entity.ProductEntity;
 import java.util.UUID;
 
 @ApplicationScoped
-public class ProductRepository extends BaseRepository<ProductEntity, UUID> {
-
+public class ProductRepository extends BaseRepository<ProductEntity, UUID>
+{
 }
+
