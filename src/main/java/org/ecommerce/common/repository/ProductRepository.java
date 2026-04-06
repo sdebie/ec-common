@@ -13,6 +13,17 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 {
+	public ProductEntity findByIdWithCategoryAndBrand(UUID productId)
+	{
+		if (productId == null) return null;
+
+		return find("select p from ProductEntity p " +
+					"left join fetch p.category " +
+					"left join fetch p.brand " +
+					"where p.id = ?1", productId)
+				.firstResult();
+	}
+
 	public List<ProductListItemDto> findAllProductListItems(PageRequest pageRequest, FilterRequest filterRequest)
 	{
 		return findAll(pageRequest, filterRequest).stream()
