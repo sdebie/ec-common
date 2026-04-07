@@ -18,6 +18,9 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
     @JoinColumn(name = "batch_id")
     public ProductUploadBatchEntity batch;
 
+    @Column(name = "product_slug")
+    public String productSlug;
+
     public String sku;
     public String name;
 

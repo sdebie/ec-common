@@ -17,6 +17,9 @@ public class ProductEntity extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
+    @Column(nullable = false, unique = true)
+    public String slug;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     public CategoryEntity category;

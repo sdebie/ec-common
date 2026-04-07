@@ -12,20 +12,20 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
 {
     public List<T> findAll(PageRequest pageRequest, FilterRequest filterRequest)
     {
-
         PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
         PanacheQuery<T> query;
 
-        if (queryBuilder.hasQuery()) {
-            query = findAll(queryBuilder.sort());
-        } else if (queryBuilder.hasParams()) {
+        if (queryBuilder.hasQuery() && queryBuilder.hasParams()) {
+            // Filtered query with bound parameters (e.g. ILIKE, EQUALS, …)
             query = find(queryBuilder.query(), queryBuilder.sort(), queryBuilder.params());
-
-        } else {
-            // Query string with no bound params — e.g. "active IS NOT NULL"
+        } else if (queryBuilder.hasQuery()) {
+            // Param-free clauses such as IS NULL / IS NOT NULL
             query = find(queryBuilder.query(), queryBuilder.sort());
-
+        } else {
+            // No filter at all — return every row
+            query = findAll(queryBuilder.sort());
         }
+
         query.page(queryBuilder.page(pageRequest));
         return query.list();
     }
@@ -34,13 +34,15 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
     {
         PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
 
-        if (queryBuilder.hasQuery()) {
-            return count();
-        }
-
-        if (queryBuilder.hasParams()) {
+        if (queryBuilder.hasQuery() && queryBuilder.hasParams()) {
             return count(queryBuilder.query(), queryBuilder.params());
         }
-        return count(queryBuilder.query());
+
+        if (queryBuilder.hasQuery()) {
+            // Param-free clauses such as IS NULL / IS NOT NULL
+            return count(queryBuilder.query());
+        }
+
+        return count();
     }
 }
