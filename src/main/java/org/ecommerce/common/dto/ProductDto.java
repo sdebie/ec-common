@@ -29,32 +29,12 @@ public class ProductDto {
     @Description("Product created date/time")
     public String createdAt;
 
-    @Description("Category ID (UUID as string)")
-    public String categoryId;
+    @Description("Category")
+    public CategoryDto category;
 
-    @Description("Brand ID (UUID as string)")
-    public String brandId;
+    @Description("Brand")
+    public BrandDto brand;
 
     public ProductDto() {}
-
-    public ProductDto(String id,
-                      String slug,
-                      String name,
-                      String description,
-                      String shortDescription,
-                      String productType,
-                      String createdAt,
-                      String categoryId,
-                      String brandId) {
-        this.id = id;
-        this.slug = slug;
-        this.name = name;
-        this.description = description;
-        this.shortDescription = shortDescription;
-        this.productType = productType;
-        this.createdAt = createdAt;
-        this.categoryId = categoryId;
-        this.brandId = brandId;
-    }
 }
 

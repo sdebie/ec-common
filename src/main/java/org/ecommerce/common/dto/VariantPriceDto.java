@@ -32,13 +32,4 @@ public class VariantPriceDto {
 
     public VariantPriceDto() {}
 
-    public VariantPriceDto(String id, String priceType, BigDecimal price,
-                          LocalDateTime priceStartDate, LocalDateTime priceEndDate, Boolean isActive) {
-        this.id = id;
-        this.priceType = priceType;
-        this.price = price;
-        this.priceStartDate = priceStartDate;
-        this.priceEndDate = priceEndDate;
-        this.isActive = isActive;
-    }
 }

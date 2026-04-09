@@ -6,6 +6,7 @@ import org.ecommerce.common.query.enums.LogicalOperator;
 import org.ecommerce.common.query.enums.SortDirection;
 
 import java.util.*;
+import java.util.UUID;
 
 public class PanacheQueryBuilder
 {
@@ -197,6 +198,10 @@ public class PanacheQueryBuilder
     {
         if (value == null) return null;
         if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) return Boolean.parseBoolean(value);
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ignored) {
+        }
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException ignored) {

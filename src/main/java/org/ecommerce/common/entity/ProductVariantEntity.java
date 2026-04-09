@@ -46,13 +46,6 @@ public class ProductVariantEntity extends PanacheEntityBase {
         return find("select v from ProductVariantEntity v left join fetch v.product where v.id = ?1", id).firstResult();
     }
 
-    // Helper to fetch multiple variants with product in one go
-    public static List<ProductVariantEntity> listByIdsWithProduct(List<UUID> ids) {
-        if (ids == null || ids.isEmpty())
-            return Collections.emptyList();
-
-        return list("select v from ProductVariantEntity v left join fetch v.product where v.id in ?1", ids);
-    }
 
     // Helper to fetch all variants for a given product id including the product relation
     public static List<ProductVariantEntity> listByProductIdWithProduct(UUID productId) {

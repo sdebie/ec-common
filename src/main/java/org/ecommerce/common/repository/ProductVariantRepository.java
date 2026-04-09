@@ -1,10 +1,14 @@
 package org.ecommerce.common.repository;
 
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.PriceTypeEn;
+import org.ecommerce.common.query.PageRequest;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +44,37 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return list(
                 "select v from ProductVariantEntity v left join fetch v.product where v.product.id = ?1 order by v.id asc",
                 productId);
+    }
+
+    /**
+     * Fetch all variants that carry an active RETAIL_SALE_PRICE or WHOLESALE_SALE_PRICE.
+     * Eagerly loads the parent product and its category to avoid N+1 queries.
+     */
+    public List<ProductVariantEntity> findOnSaleVariants(PageRequest pageRequest)
+    {
+        LocalDateTime now = LocalDateTime.now();
+        List<PriceTypeEn> salePriceTypes = List.of(
+                PriceTypeEn.RETAIL_SALE_PRICE,
+                PriceTypeEn.WHOLESALE_SALE_PRICE);
+
+        return find(
+                "select v from ProductVariantEntity v " +
+                "left join fetch v.product p " +
+                "left join fetch p.category " +
+                "where v.id in (" +
+                "  select v2.id from ProductVariantEntity v2 " +
+                "  join v2.variantPrices vp " +
+                "  where vp.priceType in ?1 " +
+                "  and (vp.priceStartDate is null or vp.priceStartDate <= ?2) " +
+                "  and (vp.priceEndDate is null or vp.priceEndDate >= ?2)" +
+                ")",
+                Sort.by("sku"),
+                salePriceTypes,
+                now)
+                .page(Page.of(
+                        pageRequest != null ? pageRequest.getPageIndex() : 0,
+                        pageRequest != null ? pageRequest.getPageSize() : 10))
+                .list();
     }
 
     /**
