@@ -9,6 +9,7 @@ import org.ecommerce.common.dto.VariantPriceDto;
 import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.entity.VariantPricesEntity;
+import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PanacheQueryBuilder;
@@ -24,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
@@ -263,5 +265,105 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		return Math.max(daysRemaining, 0L);
 	}
 
+	// ─── Best Sellers ──────────────────────────────────────────────────────────
+
+	/**
+	 * Returns the top 10 best-selling products based on total quantity sold in
+	 * DELIVERED orders. If fewer than 10 exist, the remainder is filled with
+	 * random products so the response always contains up to 10 entries.
+	 */
+	public List<ProductShoppingListItemDto> findTopBestSellers()
+	{
+		final int TARGET = 10;
+		LocalDateTime now = LocalDateTime.now();
+
+		// Step 1 – collect best-seller product IDs ranked by units sold
+		List<Object[]> rows = getEntityManager()
+				.createQuery(
+						"select oi.variant.product.id, sum(oi.quantity) as total " +
+						"from OrderItemEntity oi " +
+						"join oi.orderEntity o " +
+						"where o.status = :status " +
+						"and oi.variant is not null " +
+						"group by oi.variant.product.id " +
+						"order by total desc",
+						Object[].class)
+				.setParameter("status", OrderStatusEn.DELIVERED)
+				.setMaxResults(TARGET)
+				.getResultList();
+
+		List<UUID> bestSellerIds = rows.stream()
+				.map(row -> (UUID) row[0])
+				.collect(Collectors.toList());
+
+		// Step 2 – fetch full product entities (with category + brand) preserving rank order
+		List<ProductEntity> bestSellers = fetchProductsByIds(bestSellerIds);
+
+		// Step 3 – pad with random products when fewer than TARGET were found
+		List<ProductEntity> result = new ArrayList<>(bestSellers);
+		if (result.size() < TARGET) {
+			int needed = TARGET - result.size();
+			List<ProductEntity> random = findRandomProductEntitiesExcluding(needed, bestSellerIds);
+			result.addAll(random);
+		}
+
+		return result.stream()
+				.map(p -> toShoppingListItemDto(p, now))
+				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Fetches ProductEntity records for the given IDs with category and brand
+	 * eagerly loaded. The returned list preserves the order of the supplied IDs.
+	 */
+	private List<ProductEntity> fetchProductsByIds(List<UUID> ids)
+	{
+		if (ids == null || ids.isEmpty()) return Collections.emptyList();
+
+		List<ProductEntity> unordered = getEntityManager()
+				.createQuery(
+						"select p from ProductEntity p " +
+						"left join fetch p.category " +
+						"left join fetch p.brand " +
+						"where p.id in :ids",
+						ProductEntity.class)
+				.setParameter("ids", ids)
+				.getResultList();
+
+		// Restore the ranked order returned by the aggregation query
+		Map<UUID, ProductEntity> byId = unordered.stream()
+				.collect(Collectors.toMap(p -> p.id, p -> p));
+
+		return ids.stream()
+				.map(byId::get)
+				.filter(p -> p != null)
+				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Returns up to {@code limit} random products excluding the given IDs.
+	 */
+	private List<ProductEntity> findRandomProductEntitiesExcluding(int limit, List<UUID> excludeIds)
+	{
+		TypedQuery<ProductEntity> q;
+		if (excludeIds == null || excludeIds.isEmpty()) {
+			q = getEntityManager().createQuery(
+					"select p from ProductEntity p " +
+					"left join fetch p.category " +
+					"left join fetch p.brand " +
+					"order by function('random')",
+					ProductEntity.class);
+		} else {
+			q = getEntityManager().createQuery(
+					"select p from ProductEntity p " +
+					"left join fetch p.category " +
+					"left join fetch p.brand " +
+					"where p.id not in :excludeIds " +
+					"order by function('random')",
+					ProductEntity.class)
+					.setParameter("excludeIds", excludeIds);
+		}
+		return q.setMaxResults(limit).getResultList();
+	}
 
 }
