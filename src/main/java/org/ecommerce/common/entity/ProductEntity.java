@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import org.ecommerce.common.enums.ProductTypeEn;
@@ -43,4 +44,7 @@ public class ProductEntity extends PanacheEntityBase {
 
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    public List<ProductVariantEntity> variants;
 }

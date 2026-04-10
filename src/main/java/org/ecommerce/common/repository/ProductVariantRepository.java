@@ -63,7 +63,7 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 "left join fetch p.category " +
                 "where v.id in (" +
                 "  select v2.id from ProductVariantEntity v2 " +
-                "  join v2.variantPrices vp " +
+                "  join VariantPricesEntity vp on vp.variant = v2 " +
                 "  where vp.priceType in ?1 " +
                 "  and (vp.priceStartDate is null or vp.priceStartDate <= ?2) " +
                 "  and (vp.priceEndDate is null or vp.priceEndDate >= ?2)" +
@@ -83,15 +83,9 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
      */
     public BigDecimal getMinimumPrice(UUID productId, PriceTypeEn priceType)
     {
-        if (productId == null) return BigDecimal.ZERO;
+        return BigDecimal.ZERO;
 
-        List<ProductVariantEntity> variants = findByVariantsForProductId(productId);
-        return variants.stream()
-                .flatMap(v -> v.variantPrices.stream())
-                .filter(p -> p.priceType.equals(priceType) && p.isActive())
-                .map(p -> p.price)
-                .min(BigDecimal::compareTo)
-                .orElse(BigDecimal.ZERO);
+        //TODO::SDB Get the prices in window
     }
 }
 

@@ -7,7 +7,9 @@ import java.util.List;
 
 /**
  * DTO representing a product variant on sale, enriched with its parent product info and images.
+ * @deprecated Replaced by SalesProductListDto (product + variants on sale).
  */
+@Deprecated
 @Type
 public class SaleVariantDto {
 

@@ -1,10 +1,14 @@
 package org.ecommerce.common.repository;
 
-import io.quarkus.panache.common.Page;
-import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.dto.ProductListItemDto;
+import org.ecommerce.common.dto.ProductImageDto;
+import org.ecommerce.common.dto.ProductShoppingListItemDto;
+import org.ecommerce.common.dto.VariantPriceDto;
+import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductEntity;
+import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PanacheQueryBuilder;
@@ -13,6 +17,7 @@ import org.ecommerce.common.query.SortRequest;
 import org.ecommerce.common.query.enums.SortDirection;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -44,9 +49,10 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.category " +
+				"left join fetch p.brand " +
 				"where exists (" +
 				"select 1 from ProductVariantEntity v " +
-				"join v.variantPrices vp " +
+				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
@@ -75,34 +81,47 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.toList();
 	}
 
-	public List<ProductListItemDto> findActiveSaleProductListItems(PageRequest pageRequest)
+	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest)
 	{
 		LocalDateTime now = LocalDateTime.now();
-		List<PriceTypeEn> salePriceTypes = List.of(
+		List<PriceTypeEn> shoppingPriceTypes = List.of(
+				PriceTypeEn.RETAIL_PRICE,
+				PriceTypeEn.WHOLESALE_PRICE,
 				PriceTypeEn.RETAIL_SALE_PRICE,
 				PriceTypeEn.WHOLESALE_SALE_PRICE);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
 
-		return find(
-				"select distinct p from ProductEntity p " +
-						"left join fetch p.category " +
-						"where p.id in (" +
-						"select distinct v.product.id from ProductVariantEntity v " +
-						"join v.variantPrices vp " +
-						"where vp.priceType in ?1 " +
-						"and (vp.priceStartDate is null or vp.priceStartDate <= ?2) " +
-						"and (vp.priceEndDate is null or vp.priceEndDate >= ?2)" +
-						")",
-				Sort.by("p.name"),
-				salePriceTypes,
-				now)
-				.page(Page.of(
-						pageRequest != null ? pageRequest.getPageIndex() : 0,
-						pageRequest != null ? pageRequest.getPageSize() : 10))
-				.list()
-				.stream()
-				.map(this::toProductListItemDto)
+		String query = "select distinct p from ProductEntity p " +
+				"left join fetch p.category " +
+				"left join fetch p.brand " +
+				"where exists (" +
+				"select 1 from ProductVariantEntity v " +
+				"join VariantPricesEntity vp on vp.variant = v " +
+				"where v.product = p " +
+				"and vp.priceType in :priceTypes " +
+				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+				")";
+
+		if (queryBuilder.hasQuery()) {
+			query += " AND " + queryBuilder.query();
+		}
+
+		query += buildOrderByClause(filterRequest != null ? filterRequest.getSort() : null, "p");
+
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("priceTypes", shoppingPriceTypes);
+		params.put("now", now);
+		if (queryBuilder.hasParams()) {
+			params.putAll(queryBuilder.params());
+		}
+
+		return find(query, params)
+				.page(queryBuilder.page(pageRequest)).list().stream()
+				.map(product -> toShoppingListItemDto(product, now))
 				.toList();
 	}
+
 
 	/**
 	 * Builds a fully-qualified HQL ORDER BY clause using the given entity alias,
@@ -140,12 +159,109 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				product.name,
 				product.description,
 				null,
-				null,
-				null,
-				null,
 				Collections.emptyList(),
-				Collections.emptyList(),
-				product.category != null ? product.category.name : null);
+				product.category != null ? product.category.name : null,
+				product.brand != null ? product.brand.name : null);
 	}
-}
 
+	private ProductShoppingListItemDto toShoppingListItemDto(ProductEntity product, LocalDateTime now)
+	{
+		ProductShoppingListItemDto dto = new ProductShoppingListItemDto();
+		dto.id = product.id == null ? null : product.id.toString();
+		dto.name = product.name;
+		dto.shortDescription = product.shorDescription;
+		dto.variantCount = product.id == null ? 0 : countVariants(product.id);
+		dto.images = product.id == null ? List.of() : findProductImages(product.id);
+		dto.retailPrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_PRICE, now);
+		dto.wholesalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_PRICE, now);
+		dto.retailSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_SALE_PRICE, now);
+		dto.wholesaleSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_SALE_PRICE, now);
+		return dto;
+	}
+
+	private Integer countVariants(UUID productId)
+	{
+		Long count = getEntityManager()
+				.createQuery("select count(v.id) from ProductVariantEntity v where v.product.id = :productId", Long.class)
+				.setParameter("productId", productId)
+				.getSingleResult();
+		return count == null ? 0 : count.intValue();
+	}
+
+	private List<ProductImageDto> findProductImages(UUID productId)
+	{
+		return getEntityManager().createQuery(
+				"select pi from ProductImageEntity pi " +
+				"where pi.productVariant.product.id = :productId " +
+				"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc",
+				ProductImageEntity.class)
+				.setParameter("productId", productId)
+				.getResultList()
+				.stream()
+				.map(this::toProductImageDto)
+				.toList();
+	}
+
+	private ProductImageDto toProductImageDto(ProductImageEntity image)
+	{
+		return new ProductImageDto(
+				image.id == null ? null : image.id.toString(),
+				image.imageUrl,
+				image.sortOrder,
+				Boolean.TRUE.equals(image.isFeatured));
+	}
+
+	private VariantPriceDto findLowestActivePrice(UUID productId, PriceTypeEn priceType, LocalDateTime now)
+	{
+		LocalDateTime veryOldDate = LocalDateTime.of(1970, 1, 1, 0, 0);
+
+		TypedQuery<VariantPricesEntity> query = getEntityManager().createQuery(
+				"select vp from VariantPricesEntity vp " +
+				"join vp.variant v " +
+				"where v.product.id = :productId " +
+				"and vp.priceType = :priceType " +
+				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+				"and (vp.priceEndDate is null or vp.priceEndDate >= :now) " +
+				"order by vp.price asc, coalesce(vp.priceStartDate, :veryOldDate) asc, vp.createdAt asc",
+				VariantPricesEntity.class);
+
+		List<VariantPricesEntity> prices = query
+				.setParameter("productId", productId)
+				.setParameter("priceType", priceType)
+				.setParameter("now", now)
+				.setParameter("veryOldDate", veryOldDate)
+				.setMaxResults(1)
+				.getResultList();
+
+		if (prices.isEmpty()) {
+			return null;
+		}
+
+		VariantPricesEntity price = prices.get(0);
+		VariantPriceDto dto = new VariantPriceDto();
+		dto.id = price.id == null ? null : price.id.toString();
+		dto.priceType = price.priceType == null ? null : price.priceType.name();
+		dto.price = price.price;
+		dto.priceStartDate = price.priceStartDate;
+		dto.priceEndDate = price.priceEndDate;
+		dto.isActive = Boolean.TRUE;
+		dto.saleDaysRemaining = calculateSaleDaysRemaining(price.priceType, price.priceEndDate, now);
+		return dto;
+	}
+
+	private Long calculateSaleDaysRemaining(PriceTypeEn priceType, LocalDateTime endDate, LocalDateTime now)
+	{
+		if (priceType == null || endDate == null) {
+			return null;
+		}
+
+		if (priceType != PriceTypeEn.RETAIL_SALE_PRICE && priceType != PriceTypeEn.WHOLESALE_SALE_PRICE) {
+			return null;
+		}
+
+		long daysRemaining = ChronoUnit.DAYS.between(now.toLocalDate(), endDate.toLocalDate());
+		return Math.max(daysRemaining, 0L);
+	}
+
+
+}

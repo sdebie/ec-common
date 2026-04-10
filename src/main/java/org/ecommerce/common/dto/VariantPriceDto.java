@@ -30,6 +30,9 @@ public class VariantPriceDto {
     @Description("Whether this price is currently active based on date range")
     public Boolean isActive;
 
+    @Description("Number of days remaining for sale prices (RETAIL_SALE_PRICE / WHOLESALE_SALE_PRICE); null for non-sale or no end date")
+    public Long saleDaysRemaining;
+
     public VariantPriceDto() {}
 
 }

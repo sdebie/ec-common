@@ -3,6 +3,9 @@ package org.ecommerce.common.dto;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * DTO that represents the full product information available for product detail views.
  */
@@ -34,6 +37,9 @@ public class ProductDto {
 
     @Description("Brand")
     public BrandDto brand;
+
+    @Description("Product variants")
+    public List<ProductVariantDto> variants = new ArrayList<>();
 
     public ProductDto() {}
 }
