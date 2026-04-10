@@ -4,7 +4,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -28,17 +27,6 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
     @Column(name = "short_description")
     public String shortDescription;
 
-    @Column(name = "retail_price")
-    public BigDecimal retailPrice;
-
-    @Column(name = "retail_sale_price")
-    public BigDecimal retailSalePrice;
-
-    @Column(name = "wholesale_price")
-    public BigDecimal wholesalePrice;
-
-    @Column(name = "wholesale_sale_price")
-    public BigDecimal wholesaleSalePrice;
 
     @Column(name = "category_slug")
     public String categorySlug;
