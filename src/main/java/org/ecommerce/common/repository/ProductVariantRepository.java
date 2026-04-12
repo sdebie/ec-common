@@ -16,6 +16,23 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductVariantRepository extends BaseRepository<ProductVariantEntity, UUID>
 {
+    public ProductVariantEntity findBySku(String sku)
+    {
+        if (sku == null || sku.isBlank()) {
+            return null;
+        }
+        return find("sku", sku.trim()).firstResult();
+    }
+
+    public ProductVariantEntity findBySkuWithProduct(String sku)
+    {
+        if (sku == null || sku.isBlank()) {
+            return null;
+        }
+        return find("select v from ProductVariantEntity v left join fetch v.product where v.sku = ?1", sku.trim())
+                .firstResult();
+    }
+
     /**
      * Fetch a single variant together with its parent Product entity.
      */

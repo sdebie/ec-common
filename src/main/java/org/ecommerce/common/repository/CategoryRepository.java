@@ -9,6 +9,14 @@ import java.util.UUID;
 @ApplicationScoped
 public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
 {
+    public CategoryEntity findBySlugIgnoreCase(String slug)
+    {
+        if (slug == null || slug.isBlank()) {
+            return null;
+        }
+        return find("lower(slug) = ?1", slug.trim().toLowerCase()).firstResult();
+    }
+
     // returns all the subcategories
     public List<CategoryEntity> findSubCategoriesByParentId(Long parentId)
     {

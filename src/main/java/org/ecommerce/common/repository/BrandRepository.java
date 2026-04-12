@@ -8,6 +8,14 @@ import java.util.UUID;
 @ApplicationScoped
 public class BrandRepository extends BaseRepository<BrandEntity, UUID>
 {
+    public BrandEntity findBySlugIgnoreCase(String slug)
+    {
+        if (slug == null || slug.isBlank()) {
+            return null;
+        }
+        return find("lower(slug) = ?1", slug.trim().toLowerCase()).firstResult();
+    }
+
     /** Returns a brand with the given name that belongs to a different record than {@code excludeId}. */
     public BrandEntity findByNameExcludingId(String name, UUID excludeId)
     {

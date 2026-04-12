@@ -30,6 +30,22 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 {
+	public ProductEntity findBySlugIgnoreCase(String slug)
+	{
+		if (slug == null || slug.isBlank()) {
+			return null;
+		}
+		return find("lower(slug) = ?1", slug.trim().toLowerCase()).firstResult();
+	}
+
+	public ProductEntity findByNameIgnoreCase(String name)
+	{
+		if (name == null || name.isBlank()) {
+			return null;
+		}
+		return find("lower(name) = ?1", name.trim().toLowerCase()).firstResult();
+	}
+
 	public ProductEntity findByIdWithCategoryAndBrand(UUID productId)
 	{
 		if (productId == null) return null;
