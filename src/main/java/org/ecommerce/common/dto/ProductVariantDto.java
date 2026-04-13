@@ -28,4 +28,15 @@ public class ProductVariantDto {
     public List<ProductImageDto> images = new ArrayList<>();
 
     public ProductVariantDto() {}
+
+    @Type
+    public static class VariantImageDto {
+        @Description("Variant image name/url")
+        public String imageName;
+
+        @Description("Whether this variant image is featured")
+        public Boolean isFeatured;
+
+        public VariantImageDto() {}
+    }
 }
