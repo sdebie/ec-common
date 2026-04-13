@@ -2,6 +2,7 @@ package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
+import io.quarkus.panache.common.Page;
 import org.ecommerce.common.dto.ProductListItemDto;
 import org.ecommerce.common.dto.ProductImageDto;
 import org.ecommerce.common.dto.ProductShoppingListItemDto;
@@ -11,6 +12,7 @@ import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.enums.PriceTypeEn;
+import org.ecommerce.common.enums.ProductTypeEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PanacheQueryBuilder;
 import org.ecommerce.common.query.PageRequest;
@@ -140,6 +142,36 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.toList();
 	}
 
+	public List<ProductShoppingListItemDto> findOnSaleShoppingProductList(PageRequest pageRequest)
+	{
+		LocalDateTime now = LocalDateTime.now();
+		List<PriceTypeEn> salePriceTypes = List.of(
+				PriceTypeEn.RETAIL_SALE_PRICE,
+				PriceTypeEn.WHOLESALE_SALE_PRICE);
+
+		String query = "select distinct p from ProductEntity p " +
+				"left join fetch p.category " +
+				"left join fetch p.brand " +
+				"where exists (" +
+				"select 1 from ProductVariantEntity v " +
+				"join VariantPricesEntity vp on vp.variant = v " +
+				"where v.product = p " +
+				"and vp.priceType in :priceTypes " +
+				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+				") " +
+				"order by p.name asc";
+
+		return find(query,
+					Map.of("priceTypes", salePriceTypes, "now", now))
+				.page(Page.of(
+						pageRequest != null ? pageRequest.getPageIndex() : 0,
+						pageRequest != null ? pageRequest.getPageSize() : 10))
+				.list().stream()
+				.map(product -> toShoppingListItemDto(product, now))
+				.toList();
+	}
+
 
 	/**
 	 * Builds a fully-qualified HQL ORDER BY clause using the given entity alias,
@@ -188,13 +220,30 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		dto.id = product.id == null ? null : product.id.toString();
 		dto.name = product.name;
 		dto.shortDescription = product.shorDescription;
+		dto.productType = product.productType == null ? null : product.productType.name();
 		dto.variantCount = product.id == null ? 0 : countVariants(product.id);
+		dto.variantId = product.id == null || product.productType != ProductTypeEn.SIMPLE
+				? null
+				: findFirstVariantId(product.id);
 		dto.images = product.id == null ? List.of() : findProductImages(product.id);
 		dto.retailPrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_PRICE, now);
 		dto.wholesalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_PRICE, now);
 		dto.retailSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_SALE_PRICE, now);
 		dto.wholesaleSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_SALE_PRICE, now);
 		return dto;
+	}
+
+	private String findFirstVariantId(UUID productId)
+	{
+		List<UUID> variantIds = getEntityManager()
+				.createQuery(
+						"select v.id from ProductVariantEntity v where v.product.id = :productId order by v.id asc",
+						UUID.class)
+				.setParameter("productId", productId)
+				.setMaxResults(1)
+				.getResultList();
+
+		return variantIds.isEmpty() ? null : variantIds.get(0).toString();
 	}
 
 	private Integer countVariants(UUID productId)

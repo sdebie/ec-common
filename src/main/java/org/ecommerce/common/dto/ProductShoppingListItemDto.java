@@ -19,8 +19,14 @@ public class ProductShoppingListItemDto {
     @Description("Product short description")
     public String shortDescription;
 
+    @Description("Product type (e.g. SIMPLE or VARIABLE)")
+    public String productType;
+
     @Description("Total number of variants for this product")
     public Integer variantCount;
+
+    @Description("Variant ID for SIMPLE products; null for non-SIMPLE products")
+    public String variantId;
 
     @Description("Product images including featured flag")
     public List<ProductImageDto> images;
@@ -40,4 +46,3 @@ public class ProductShoppingListItemDto {
     public ProductShoppingListItemDto() {
     }
 }
-
