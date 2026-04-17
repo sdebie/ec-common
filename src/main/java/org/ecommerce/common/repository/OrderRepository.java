@@ -4,7 +4,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.OrderEntity;
 import org.ecommerce.common.entity.OrderItemEntity;
 import org.ecommerce.common.entity.ProductVariantEntity;
+import org.ecommerce.common.query.FilterRequest;
+import org.ecommerce.common.query.PageRequest;
+import org.ecommerce.common.query.SortRequest;
+import org.ecommerce.common.query.enums.SortDirection;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -76,5 +82,43 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                         ProductVariantEntity.class)
                 .setParameter("variantIds", variantIds)
                 .getResultList();
+    }
+
+    public List<OrderEntity> findAllOrderInfo(PageRequest pageRequest, FilterRequest filterRequest)
+    {
+        PageRequest effectivePageRequest = pageRequest == null ? new PageRequest() : pageRequest;
+        FilterRequest effectiveFilterRequest = withDefaultCreatedAtSort(filterRequest);
+
+        List<OrderEntity> pagedOrders = findAll(effectivePageRequest, effectiveFilterRequest);
+        if (pagedOrders == null || pagedOrders.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<OrderEntity> hydratedOrders = new ArrayList<>(pagedOrders.size());
+        for (OrderEntity order : pagedOrders) {
+            if (order == null || order.id == null) {
+                continue;
+            }
+            OrderEntity fullOrder = findOrderInfoById(order.id);
+            if (fullOrder != null) {
+                hydratedOrders.add(fullOrder);
+            }
+        }
+
+        return hydratedOrders;
+    }
+
+    private FilterRequest withDefaultCreatedAtSort(FilterRequest filterRequest)
+    {
+        if (filterRequest != null && filterRequest.getSort() != null && !filterRequest.getSort().isEmpty()) {
+            return filterRequest;
+        }
+
+        FilterRequest effective = filterRequest == null ? new FilterRequest() : filterRequest;
+        SortRequest sortRequest = new SortRequest();
+        sortRequest.setField("createdAt");
+        sortRequest.setDirection(SortDirection.DESC);
+        effective.setSort(List.of(sortRequest));
+        return effective;
     }
 }
