@@ -1,5 +1,6 @@
 package org.ecommerce.common.repository;
 
+import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductUploadStagedEntity;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
@@ -18,6 +19,17 @@ public class ProductUploadStagedRepository extends BaseRepository<ProductUploadS
     public List<ProductUploadStagedEntity> findUnprocessedByBatchId(UUID batchId)
     {
         return list("batch.id = ?1 and processed = false", batchId);
+    }
+
+    public List<ProductUploadStagedEntity> findNextUnprocessedByBatchId(UUID batchId, int limit)
+    {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        return find("batch.id = ?1 and processed = false order by id asc", batchId)
+                .page(Page.ofSize(limit))
+                .list();
     }
 
     public long countByBatchId(UUID batchId)

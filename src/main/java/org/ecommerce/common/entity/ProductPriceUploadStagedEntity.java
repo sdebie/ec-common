@@ -36,6 +36,12 @@ public class ProductPriceUploadStagedEntity extends PanacheEntityBase {
     @Column(name="has_changes")
     public Boolean hasChanges;
 
+    @Column(name = "current_retail_price")
+    public BigDecimal currentRetailPrice;
+
+    @Column(name = "current_wholesale_price")
+    public BigDecimal currentWholesalePrice;
+
     public Boolean processed = false;
 }
 

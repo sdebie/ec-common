@@ -27,7 +27,6 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
     @Column(name = "short_description")
     public String shortDescription;
 
-
     @Column(name = "category_slug")
     public String categorySlug;
 
@@ -67,6 +66,25 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
 
     @Column(name="has_changes")
     public Boolean hasChanges;
+
+    // Current (live) values captured at import time for comparison
+    @Column(name = "current_stock")
+    public Integer currentStock;
+
+    @Column(name = "current_images")
+    public String currentImages;
+
+    @Column(name = "current_attributes")
+    public String currentAttributes;
+
+    @Column(name = "current_name")
+    public String currentName;
+
+    @Column(name = "current_description")
+    public String currentDescription;
+
+    @Column(name = "current_short_description")
+    public String currentShortDescription;
 
     public Boolean processed = false;
 }
