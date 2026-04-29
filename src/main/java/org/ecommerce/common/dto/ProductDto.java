@@ -3,6 +3,9 @@ package org.ecommerce.common.dto;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * DTO that represents the full product information available for product detail views.
  */
@@ -29,32 +32,18 @@ public class ProductDto {
     @Description("Product created date/time")
     public String createdAt;
 
-    @Description("Category ID (UUID as string)")
-    public String categoryId;
+    @Description("Primary/first category (for backward compatibility)")
+    public CategoryDto category;
 
-    @Description("Brand ID (UUID as string)")
-    public String brandId;
+    @Description("All categories this product belongs to")
+    public List<CategoryDto> categories = new ArrayList<>();
+
+    @Description("Brand")
+    public BrandDto brand;
+
+    @Description("Product variants")
+    public List<ProductVariantDto> variants = new ArrayList<>();
 
     public ProductDto() {}
-
-    public ProductDto(String id,
-                      String slug,
-                      String name,
-                      String description,
-                      String shortDescription,
-                      String productType,
-                      String createdAt,
-                      String categoryId,
-                      String brandId) {
-        this.id = id;
-        this.slug = slug;
-        this.name = name;
-        this.description = description;
-        this.shortDescription = shortDescription;
-        this.productType = productType;
-        this.createdAt = createdAt;
-        this.categoryId = categoryId;
-        this.brandId = brandId;
-    }
 }
 

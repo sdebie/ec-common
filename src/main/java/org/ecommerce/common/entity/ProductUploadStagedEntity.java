@@ -4,7 +4,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -27,18 +26,6 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
     public String description;
     @Column(name = "short_description")
     public String shortDescription;
-
-    @Column(name = "retail_price")
-    public BigDecimal retailPrice;
-
-    @Column(name = "retail_sale_price")
-    public BigDecimal retailSalePrice;
-
-    @Column(name = "wholesale_price")
-    public BigDecimal wholesalePrice;
-
-    @Column(name = "wholesale_sale_price")
-    public BigDecimal wholesaleSalePrice;
 
     @Column(name = "category_slug")
     public String categorySlug;
@@ -79,6 +66,25 @@ public class ProductUploadStagedEntity extends PanacheEntityBase {
 
     @Column(name="has_changes")
     public Boolean hasChanges;
+
+    // Current (live) values captured at import time for comparison
+    @Column(name = "current_stock")
+    public Integer currentStock;
+
+    @Column(name = "current_images")
+    public String currentImages;
+
+    @Column(name = "current_attributes")
+    public String currentAttributes;
+
+    @Column(name = "current_name")
+    public String currentName;
+
+    @Column(name = "current_description")
+    public String currentDescription;
+
+    @Column(name = "current_short_description")
+    public String currentShortDescription;
 
     public Boolean processed = false;
 }

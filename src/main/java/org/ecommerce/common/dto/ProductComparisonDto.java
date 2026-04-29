@@ -2,7 +2,6 @@ package org.ecommerce.common.dto;
 
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @SuppressWarnings("unused")
@@ -31,19 +30,6 @@ public class ProductComparisonDto {
     public String proposedDescription;
     public String currentShortDescription;
     public String proposedShortDescription;
-
-    // Price comparison
-    public BigDecimal currentRetailPrice;
-    public BigDecimal proposedRetailPrice;
-
-    public BigDecimal currentRetailSalePrice;
-    public BigDecimal proposedRetailSalePrice;
-
-    public BigDecimal currentWholesalePrice;
-    public BigDecimal proposedWholesalePrice;
-
-    public BigDecimal currentWholesaleSalePrice;
-    public BigDecimal proposedWholesaleSalePrice;
 
     public boolean isValidCategory;
     public boolean isValidBrand;

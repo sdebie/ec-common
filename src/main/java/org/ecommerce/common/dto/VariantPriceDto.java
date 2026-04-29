@@ -30,15 +30,9 @@ public class VariantPriceDto {
     @Description("Whether this price is currently active based on date range")
     public Boolean isActive;
 
+    @Description("Number of days remaining for sale prices (RETAIL_SALE_PRICE / WHOLESALE_SALE_PRICE); null for non-sale or no end date")
+    public Long saleDaysRemaining;
+
     public VariantPriceDto() {}
 
-    public VariantPriceDto(String id, String priceType, BigDecimal price,
-                          LocalDateTime priceStartDate, LocalDateTime priceEndDate, Boolean isActive) {
-        this.id = id;
-        this.priceType = priceType;
-        this.price = price;
-        this.priceStartDate = priceStartDate;
-        this.priceEndDate = priceEndDate;
-        this.isActive = isActive;
-    }
 }

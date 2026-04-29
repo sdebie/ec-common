@@ -10,6 +10,22 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductImageRepository implements PanacheRepository<ProductImageEntity>
 {
+    public List<ProductImageEntity> findByVariantId(UUID variantId)
+    {
+        if (variantId == null) {
+            return List.of();
+        }
+        return list("productVariant.id", variantId);
+    }
+
+    public long deleteByVariantId(UUID variantId)
+    {
+        if (variantId == null) {
+            return 0L;
+        }
+        return delete("productVariant.id", variantId);
+    }
+
     /**
      * Find all images for a product, ordered by sort order
      */

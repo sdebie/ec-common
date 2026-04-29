@@ -3,9 +3,8 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.UuidGenerator;
-import org.ecommerce.common.enums.CustomerTypeEn;
-import org.ecommerce.common.enums.PriceTypeEn;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -27,9 +26,6 @@ public class ProductVariantEntity extends PanacheEntityBase {
     @Column(nullable = false, unique = true)
     public String sku;
 
-    @OneToMany(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<VariantPricesEntity> variantPrices = Collections.emptyList();
-
     @Column(name = "stock_quantity")
     public Integer stockQuantity;
 
@@ -40,19 +36,19 @@ public class ProductVariantEntity extends PanacheEntityBase {
     @Column(name = "weight_kg", precision = 5, scale = 2)
     public BigDecimal weightKg;
 
+    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    public List<VariantPricesEntity> prices;
+
+    @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC") // Automatically keeps your images sorted for the storefront
+    public List<ProductImageEntity> images = new ArrayList<>();
+
     // Helper method to fetch a variant together with its Product entity
     public static ProductVariantEntity findByIdWithProduct(UUID id) {
         if (id == null) return null;
         return find("select v from ProductVariantEntity v left join fetch v.product where v.id = ?1", id).firstResult();
     }
 
-    // Helper to fetch multiple variants with product in one go
-    public static List<ProductVariantEntity> listByIdsWithProduct(List<UUID> ids) {
-        if (ids == null || ids.isEmpty())
-            return Collections.emptyList();
-
-        return list("select v from ProductVariantEntity v left join fetch v.product where v.id in ?1", ids);
-    }
 
     // Helper to fetch all variants for a given product id including the product relation
     public static List<ProductVariantEntity> listByProductIdWithProduct(UUID productId) {

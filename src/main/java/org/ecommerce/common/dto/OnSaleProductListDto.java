@@ -6,22 +6,21 @@ import org.eclipse.microprofile.graphql.Type;
 import java.util.List;
 
 /**
- * DTO that represents a product with its variants.
- * Variant images are exposed on each ProductVariantDto.
+ * DTO for sale product listing: product details and only variants currently on sale.
  */
 @Type
-public class ProductInformationDto {
+public class OnSaleProductListDto {
     @Description("Product information")
     public ProductDto product;
 
-    @Description("List of variants for this product")
+    @Description("Variants for this product with active sale prices only")
     public List<ProductVariantDto> variants;
 
-    public ProductInformationDto() {}
+    public OnSaleProductListDto() {}
 
-    public ProductInformationDto(ProductDto product,
-                                 List<ProductVariantDto> variants) {
+    public OnSaleProductListDto(ProductDto product, List<ProductVariantDto> variants) {
         this.product = product;
         this.variants = variants;
     }
 }
+

@@ -1,0 +1,50 @@
+package org.ecommerce.common.repository;
+
+import io.quarkus.panache.common.Page;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.ecommerce.common.entity.ProductPriceUploadStagedEntity;
+import org.ecommerce.common.enums.ProductImportValidationStatusEn;
+
+import java.util.List;
+import java.util.UUID;
+
+@ApplicationScoped
+public class ProductPriceUploadStagedRepository extends BaseRepository<ProductPriceUploadStagedEntity, UUID>
+{
+    public List<ProductPriceUploadStagedEntity> findByBatchId(UUID batchId)
+    {
+        return list("batch.id = ?1", batchId);
+    }
+
+    public List<ProductPriceUploadStagedEntity> findUnprocessedByBatchId(UUID batchId)
+    {
+        return list("batch.id = ?1 and processed = false", batchId);
+    }
+
+    public List<ProductPriceUploadStagedEntity> findNextUnprocessedByBatchId(UUID batchId, int limit)
+    {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        return find("batch.id = ?1 and processed = false order by id asc", batchId)
+                .page(Page.ofSize(limit))
+                .list();
+    }
+
+    public long countByBatchId(UUID batchId)
+    {
+        return count("batch.id", batchId);
+    }
+
+    public long countProcessedValidByBatchId(UUID batchId)
+    {
+        return count("batch.id = ?1 and processed = true and validationStatus = ?2", batchId, ProductImportValidationStatusEn.VALID);
+    }
+
+    public long countProcessedInvalidByBatchId(UUID batchId)
+    {
+        return count("batch.id = ?1 and processed = true and (validationStatus is null or validationStatus <> ?2)", batchId, ProductImportValidationStatusEn.VALID);
+    }
+}
+
