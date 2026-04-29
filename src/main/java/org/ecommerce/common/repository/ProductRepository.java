@@ -9,11 +9,14 @@ import org.ecommerce.common.dto.ProductShoppingListItemDto;
 import org.ecommerce.common.dto.VariantPriceDto;
 import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductEntity;
+import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.enums.ProductTypeEn;
 import org.ecommerce.common.query.FilterRequest;
+import org.ecommerce.common.query.Filter;
+import org.ecommerce.common.query.FilterGroup;
 import org.ecommerce.common.query.PanacheQueryBuilder;
 import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
@@ -53,7 +56,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		if (productId == null) return null;
 
 		return find("select p from ProductEntity p " +
-					"left join fetch p.category " +
+					"left join fetch p.categories " +
 					"left join fetch p.brand " +
 					"where p.id = ?1", productId)
 				.firstResult();
@@ -68,8 +71,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
 
 		String query = "select distinct p from ProductEntity p " +
-				"left join fetch p.category " +
+				"left join fetch p.categories " +
 				"left join fetch p.brand " +
+				(hasFiltersOnCategories(filterRequest) ? "left join CategoryEntity c on c member of p.categories " : "") +
 				"where exists (" +
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
@@ -112,8 +116,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
 
 		String query = "select distinct p from ProductEntity p " +
-				"left join fetch p.category " +
+				"left join fetch p.categories " +
 				"left join fetch p.brand " +
+				(hasFiltersOnCategories(filterRequest) ? "left join CategoryEntity c on c member of p.categories " : "") +
 				"where exists (" +
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
@@ -150,7 +155,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				PriceTypeEn.WHOLESALE_SALE_PRICE);
 
 		String query = "select distinct p from ProductEntity p " +
-				"left join fetch p.category " +
+				"left join fetch p.categories " +
 				"left join fetch p.brand " +
 				"where exists (" +
 				"select 1 from ProductVariantEntity v " +
@@ -202,15 +207,72 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				: " ORDER BY " + String.join(", ", parts);
 	}
 
+	/**
+	 * Check if the filter request contains any filters on category fields
+	 */
+	private boolean hasFiltersOnCategories(FilterRequest filterRequest)
+	{
+		if (filterRequest == null) return false;
+
+		if (filterRequest.getFilters() != null) {
+			for (Filter f : filterRequest.getFilters()) {
+				if (f.getKey() != null && f.getKey().startsWith("category")) {
+					return true;
+				}
+			}
+		}
+
+		if (filterRequest.getFilterGroups() != null) {
+			for (FilterGroup fg : filterRequest.getFilterGroups()) {
+				if (hasFiltersOnCategoriesInGroup(fg)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private boolean hasFiltersOnCategoriesInGroup(FilterGroup group)
+	{
+		if (group == null) return false;
+
+		if (group.getFilters() != null) {
+			for (Filter f : group.getFilters()) {
+				if (f.getKey() != null && f.getKey().startsWith("category")) {
+					return true;
+				}
+			}
+		}
+
+		if (group.getFilterGroups() != null) {
+			for (FilterGroup sub : group.getFilterGroups()) {
+				if (hasFiltersOnCategoriesInGroup(sub)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 	private ProductListItemDto toProductListItemDto(ProductEntity product)
 	{
+		List<String> categoryNames = new ArrayList<>();
+
+		if (product.categories != null && !product.categories.isEmpty()) {
+			categoryNames = product.categories.stream()
+					.map(c -> c.name)
+					.toList();
+		}
+
 		return new ProductListItemDto(
 				product.id == null ? null : product.id.toString(),
 				product.name,
 				product.description,
 				null,
 				Collections.emptyList(),
-				product.category != null ? product.category.name : null,
+				categoryNames,
 				product.brand != null ? product.brand.name : null);
 	}
 
@@ -388,7 +450,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		List<ProductEntity> unordered = getEntityManager()
 				.createQuery(
 						"select p from ProductEntity p " +
-						"left join fetch p.category " +
+						"left join fetch p.categories " +
 						"left join fetch p.brand " +
 						"where p.id in :ids",
 						ProductEntity.class)
@@ -414,14 +476,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		if (excludeIds == null || excludeIds.isEmpty()) {
 			q = getEntityManager().createQuery(
 					"select p from ProductEntity p " +
-					"left join fetch p.category " +
+					"left join fetch p.categories " +
 					"left join fetch p.brand " +
 					"order by function('random')",
 					ProductEntity.class);
 		} else {
 			q = getEntityManager().createQuery(
 					"select p from ProductEntity p " +
-					"left join fetch p.category " +
+					"left join fetch p.categories " +
 					"left join fetch p.brand " +
 					"where p.id not in :excludeIds " +
 					"order by function('random')",

@@ -3,6 +3,8 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
@@ -33,4 +35,7 @@ public class CategoryEntity extends PanacheEntityBase
 
     @Column(name = "image_url")
     public String imageUrl;
+
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "categories")
+    public Set<ProductEntity> products = new HashSet<>();
 }

@@ -32,8 +32,11 @@ public class ProductDto {
     @Description("Product created date/time")
     public String createdAt;
 
-    @Description("Category")
+    @Description("Primary/first category (for backward compatibility)")
     public CategoryDto category;
+
+    @Description("All categories this product belongs to")
+    public List<CategoryDto> categories = new ArrayList<>();
 
     @Description("Brand")
     public BrandDto brand;

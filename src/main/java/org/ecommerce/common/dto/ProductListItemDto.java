@@ -3,6 +3,7 @@ package org.ecommerce.common.dto;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,8 +20,8 @@ public class ProductListItemDto {
     @Description("Short description")
     public String description;
 
-    @Description("Category Name")
-    public String categoryName;
+    @Description("All category names this product belongs to")
+    public List<String> categoryNames = new ArrayList<>();
 
     @Description("Brand Name")
     public String brandName;
@@ -35,14 +36,14 @@ public class ProductListItemDto {
 
     public ProductListItemDto(String id, String name, String description,
                               String imageName,
-                              List<String> variantIds, String categoryName,
+                              List<String> variantIds, List<String> categoryNames,
                               String brandName) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.imageName = imageName;
         this.variantIds = variantIds;
-        this.categoryName = categoryName;
+        this.categoryNames = categoryNames != null ? new ArrayList<>(categoryNames) : new ArrayList<>();
         this.brandName = brandName;
     }
 }

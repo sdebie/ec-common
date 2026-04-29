@@ -3,7 +3,9 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import org.ecommerce.common.enums.ProductTypeEn;
@@ -21,9 +23,28 @@ public class ProductEntity extends PanacheEntityBase {
     @Column(nullable = false, unique = true)
     public String slug;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
+    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JoinTable(
+        name = "product_categories",
+        joinColumns = @JoinColumn(name = "product_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    public Set<CategoryEntity> categories = new HashSet<>();
+
+    // Convenience property for backward compatibility
+    @Transient
     public CategoryEntity category;
+
+    public void setCategory(CategoryEntity cat) {
+        this.category = cat;
+        if (cat != null) {
+            this.categories.add(cat);
+        }
+    }
+
+    public CategoryEntity getCategory() {
+        return this.category != null ? this.category : (categories.isEmpty() ? null : categories.iterator().next());
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id")
