@@ -9,7 +9,6 @@ import org.ecommerce.common.dto.ProductShoppingListItemDto;
 import org.ecommerce.common.dto.VariantPriceDto;
 import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductEntity;
-import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.enums.PriceTypeEn;
@@ -104,6 +103,56 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.map(this::toProductListItemDto)
 				.toList();
 	}
+
+ public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds)
+ {
+	 if (categoryIds == null || categoryIds.isEmpty()) {
+		 return Collections.emptyList();
+	 }
+
+	 LocalDateTime now = LocalDateTime.now();
+	 List<PriceTypeEn> basePriceTypes = List.of(
+			 PriceTypeEn.RETAIL_PRICE,
+			 PriceTypeEn.WHOLESALE_PRICE);
+	 PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+
+	 String query = "select distinct p from ProductEntity p " +
+			 "left join fetch p.categories " +
+			 "left join fetch p.brand " +
+			 "where exists (" +
+			 "select 1 from ProductEntity scopedProduct " +
+			 "join scopedProduct.categories scopedCategory " +
+			 "where scopedProduct = p " +
+			 "and scopedCategory.id in :categoryIds" +
+			 ") " +
+			 "and exists (" +
+			 "select 1 from ProductVariantEntity v " +
+			 "join VariantPricesEntity vp on vp.variant = v " +
+			 "where v.product = p " +
+			 "and vp.priceType in :priceTypes " +
+			 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+			 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+			 ")";
+
+	 if (queryBuilder.hasQuery()) {
+		 query += " AND " + queryBuilder.query();
+	 }
+
+	 query += buildOrderByClause(filterRequest != null ? filterRequest.getSort() : null, "p");
+
+	 Map<String, Object> params = new LinkedHashMap<>();
+	 params.put("categoryIds", categoryIds);
+	 params.put("priceTypes", basePriceTypes);
+	 params.put("now", now);
+	 if (queryBuilder.hasParams()) {
+		 params.putAll(queryBuilder.params());
+	 }
+
+	 return find(query, params)
+			 .page(queryBuilder.page(pageRequest)).list().stream()
+			 .map(this::toProductListItemDto)
+			 .toList();
+ }
 
 	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest)
 	{

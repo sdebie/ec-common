@@ -17,6 +17,14 @@ public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
         return find("lower(slug) = ?1", slug.trim().toLowerCase()).firstResult();
     }
 
+    public CategoryEntity findMainCategoryById(UUID id)
+    {
+        if (id == null) {
+            return null;
+        }
+        return find("id = ?1 and parent is null", id).firstResult();
+    }
+
     // returns all the subcategories
     public List<CategoryEntity> findSubCategoriesByParentId(Long parentId)
     {

@@ -31,19 +31,13 @@ public class ProductEntity extends PanacheEntityBase {
     )
     public Set<CategoryEntity> categories = new HashSet<>();
 
-    // Convenience property for backward compatibility
-    @Transient
-    public CategoryEntity category;
-
     public void setCategory(CategoryEntity cat) {
-        this.category = cat;
-        if (cat != null) {
-            this.categories.add(cat);
-        }
+        if (cat == null) return;
+        this.categories.add(cat);
     }
 
     public CategoryEntity getCategory() {
-        return this.category != null ? this.category : (categories.isEmpty() ? null : categories.iterator().next());
+        return categories.isEmpty() ? null : categories.iterator().next();
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
