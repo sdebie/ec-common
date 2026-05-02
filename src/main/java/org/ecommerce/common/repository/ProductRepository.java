@@ -265,7 +265,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
 		if (filterRequest.getFilters() != null) {
 			for (Filter f : filterRequest.getFilters()) {
-				if (f.getKey() != null && f.getKey().startsWith("category")) {
+				if (isCategoryFilterKey(f.getKey())) {
 					return true;
 				}
 			}
@@ -288,7 +288,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
 		if (group.getFilters() != null) {
 			for (Filter f : group.getFilters()) {
-				if (f.getKey() != null && f.getKey().startsWith("category")) {
+				if (isCategoryFilterKey(f.getKey())) {
 					return true;
 				}
 			}
@@ -303,6 +303,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		}
 
 		return false;
+	}
+
+	private boolean isCategoryFilterKey(String key)
+	{
+		if (key == null || key.isBlank()) {
+			return false;
+		}
+		return key.startsWith("category") || key.startsWith("categories") || key.startsWith("c.");
 	}
 
 	private ProductListItemDto toProductListItemDto(ProductEntity product)
