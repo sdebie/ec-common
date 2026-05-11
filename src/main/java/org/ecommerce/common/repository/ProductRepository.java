@@ -55,9 +55,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		if (productId == null) return null;
 
 		return find("select p from ProductEntity p " +
-				"left join fetch p.categories " +
-				"left join fetch p.brand " +
-				"where p.id = ?1", productId)
+					"left join fetch p.categories " +
+					"left join fetch p.brand " +
+					"where p.id = ?1", productId)
 				.firstResult();
 	}
 
@@ -67,13 +67,13 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		List<PriceTypeEn> basePriceTypes = List.of(
 				PriceTypeEn.RETAIL_PRICE,
 				PriceTypeEn.WHOLESALE_PRICE);
-		rewriteCategoryJoinFilterKeys(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.categories " +
 				"left join fetch p.brand " +
-				(hasFiltersOnCategories(filterRequest) ? "left join CategoryEntity c on c member of p.categories " : "") +
+				(hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
 				"where exists (" +
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
@@ -90,7 +90,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		// Append a fully-qualified ORDER BY directly into HQL to avoid Hibernate's
 		// "Ambiguous unqualified attribute reference 'name'" error that arises when
 		// both ProductEntity (p) and the join-fetched CategoryEntity share a 'name' field.
-		query += buildOrderByClause(filterRequest != null ? filterRequest.getSort() : null, "p");
+		query += buildOrderByClause(normalizedFilterRequest != null ? normalizedFilterRequest.getSort() : null, "p");
 
 		Map<String, Object> params = new LinkedHashMap<>();
 		params.put("priceTypes", basePriceTypes);
@@ -105,55 +105,57 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.toList();
 	}
 
-	public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds)
-	{
-		if (categoryIds == null || categoryIds.isEmpty()) {
-			return Collections.emptyList();
-		}
+ public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds)
+ {
+	 if (categoryIds == null || categoryIds.isEmpty()) {
+		 return Collections.emptyList();
+	 }
 
-		LocalDateTime now = LocalDateTime.now();
-		List<PriceTypeEn> basePriceTypes = List.of(
-				PriceTypeEn.RETAIL_PRICE,
-				PriceTypeEn.WHOLESALE_PRICE);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+	 LocalDateTime now = LocalDateTime.now();
+	 List<PriceTypeEn> basePriceTypes = List.of(
+			 PriceTypeEn.RETAIL_PRICE,
+			 PriceTypeEn.WHOLESALE_PRICE);
+	 FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
+	 PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
 
-		String query = "select distinct p from ProductEntity p " +
-				"left join fetch p.categories " +
-				"left join fetch p.brand " +
-				"where exists (" +
-				"select 1 from ProductEntity scopedProduct " +
-				"join scopedProduct.categories scopedCategory " +
-				"where scopedProduct = p " +
-				"and scopedCategory.id in :categoryIds" +
-				") " +
-				"and exists (" +
-				"select 1 from ProductVariantEntity v " +
-				"join VariantPricesEntity vp on vp.variant = v " +
-				"where v.product = p " +
-				"and vp.priceType in :priceTypes " +
-				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-				")";
+	 String query = "select distinct p from ProductEntity p " +
+			 "left join fetch p.categories " +
+			 "left join fetch p.brand " +
+			 (hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
+			 "where exists (" +
+			 "select 1 from ProductEntity scopedProduct " +
+			 "join scopedProduct.categories scopedCategory " +
+			 "where scopedProduct = p " +
+			 "and scopedCategory.id in :categoryIds" +
+			 ") " +
+			 "and exists (" +
+			 "select 1 from ProductVariantEntity v " +
+			 "join VariantPricesEntity vp on vp.variant = v " +
+			 "where v.product = p " +
+			 "and vp.priceType in :priceTypes " +
+			 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+			 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+			 ")";
 
-		if (queryBuilder.hasQuery()) {
-			query += " AND " + queryBuilder.query();
-		}
+	 if (queryBuilder.hasQuery()) {
+		 query += " AND " + queryBuilder.query();
+	 }
 
-		query += buildOrderByClause(filterRequest != null ? filterRequest.getSort() : null, "p");
+	 query += buildOrderByClause(normalizedFilterRequest != null ? normalizedFilterRequest.getSort() : null, "p");
 
-		Map<String, Object> params = new LinkedHashMap<>();
-		params.put("categoryIds", categoryIds);
-		params.put("priceTypes", basePriceTypes);
-		params.put("now", now);
-		if (queryBuilder.hasParams()) {
-			params.putAll(queryBuilder.params());
-		}
+	 Map<String, Object> params = new LinkedHashMap<>();
+	 params.put("categoryIds", categoryIds);
+	 params.put("priceTypes", basePriceTypes);
+	 params.put("now", now);
+	 if (queryBuilder.hasParams()) {
+		 params.putAll(queryBuilder.params());
+	 }
 
-		return find(query, params)
-				.page(queryBuilder.page(pageRequest)).list().stream()
-				.map(this::toProductListItemDto)
-				.toList();
-	}
+	 return find(query, params)
+			 .page(queryBuilder.page(pageRequest)).list().stream()
+			 .map(this::toProductListItemDto)
+			 .toList();
+ }
 
 	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest)
 	{
@@ -163,13 +165,13 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				PriceTypeEn.WHOLESALE_PRICE,
 				PriceTypeEn.RETAIL_SALE_PRICE,
 				PriceTypeEn.WHOLESALE_SALE_PRICE);
-		rewriteCategoryJoinFilterKeys(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.categories " +
 				"left join fetch p.brand " +
-				(hasFiltersOnCategories(filterRequest) ? "left join CategoryEntity c on c member of p.categories " : "") +
+				(hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
 				"where exists (" +
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
@@ -183,7 +185,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			query += " AND " + queryBuilder.query();
 		}
 
-		query += buildOrderByClause(filterRequest != null ? filterRequest.getSort() : null, "p");
+		query += buildOrderByClause(normalizedFilterRequest != null ? normalizedFilterRequest.getSort() : null, "p");
 
 		Map<String, Object> params = new LinkedHashMap<>();
 		params.put("priceTypes", shoppingPriceTypes);
@@ -219,7 +221,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"order by p.name asc";
 
 		return find(query,
-				Map.of("priceTypes", salePriceTypes, "now", now))
+					Map.of("priceTypes", salePriceTypes, "now", now))
 				.page(Page.of(
 						pageRequest != null ? pageRequest.getPageIndex() : 0,
 						pageRequest != null ? pageRequest.getPageSize() : 10))
@@ -267,7 +269,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
 		if (filterRequest.getFilters() != null) {
 			for (Filter f : filterRequest.getFilters()) {
-				if (isCategoryFilterKey(f.getKey())) {
+				if (f.getKey() != null && (f.getKey().startsWith("category") || f.getKey().startsWith("categories"))) {
 					return true;
 				}
 			}
@@ -290,7 +292,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
 		if (group.getFilters() != null) {
 			for (Filter f : group.getFilters()) {
-				if (isCategoryFilterKey(f.getKey())) {
+				if (f.getKey() != null && (f.getKey().startsWith("category") || f.getKey().startsWith("categories"))) {
 					return true;
 				}
 			}
@@ -307,67 +309,81 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		return false;
 	}
 
-	private boolean isCategoryFilterKey(String key)
+	private FilterRequest normalizeProductFilterRequest(FilterRequest filterRequest)
+	{
+		FilterRequest normalized = new FilterRequest();
+		if (filterRequest == null) {
+			return normalized;
+		}
+
+		normalized.setSort(filterRequest.getSort());
+		normalized.setFilters(copyAndNormalizeFilters(filterRequest.getFilters()));
+		normalized.setFilterGroups(copyAndNormalizeGroups(filterRequest.getFilterGroups()));
+		return normalized;
+	}
+
+	private List<Filter> copyAndNormalizeFilters(List<Filter> filters)
+	{
+		if (filters == null || filters.isEmpty()) {
+			return filters;
+		}
+
+		List<Filter> normalized = new ArrayList<>(filters.size());
+		for (Filter original : filters) {
+			if (original == null) {
+				continue;
+			}
+
+			Filter copy = new Filter();
+			copy.setKey(normalizeProductFilterKey(original.getKey()));
+			copy.setOperator(original.getOperator());
+			copy.setValue(original.getValue());
+			copy.setValues(original.getValues() == null ? null : new ArrayList<>(original.getValues()));
+			normalized.add(copy);
+		}
+		return normalized;
+	}
+
+	private List<FilterGroup> copyAndNormalizeGroups(List<FilterGroup> groups)
+	{
+		if (groups == null || groups.isEmpty()) {
+			return groups;
+		}
+
+		List<FilterGroup> normalized = new ArrayList<>(groups.size());
+		for (FilterGroup group : groups) {
+			if (group == null) {
+				continue;
+			}
+
+			FilterGroup copy = new FilterGroup();
+			copy.setOperator(group.getOperator());
+			copy.setFilters(copyAndNormalizeFilters(group.getFilters()));
+			copy.setFilterGroups(copyAndNormalizeGroups(group.getFilterGroups()));
+			normalized.add(copy);
+		}
+		return normalized;
+	}
+
+	private String normalizeProductFilterKey(String key)
 	{
 		if (key == null || key.isBlank()) {
-			return false;
+			return key;
 		}
-		return key.startsWith("category") || key.startsWith("categories") || key.startsWith("c.");
-	}
 
-	/**
-	 * Product queries join assigned categories as {@code CategoryEntity c on c member of p.categories}.
-	 * Filters must reference {@code c.*}, not {@code category.*} / {@code categories.*} — those paths
-	 * are not valid on {@link ProductEntity} (field is {@code categories}) and trigger Hibernate
-	 * {@code SemanticException}.
-	 */
-	private void rewriteCategoryJoinFilterKeys(FilterRequest filterRequest)
-	{
-		if (filterRequest == null) {
-			return;
+		if (key.startsWith("p.") || key.startsWith("category.")) {
+			return key;
 		}
-		if (filterRequest.getFilters() != null) {
-			for (Filter f : filterRequest.getFilters()) {
-				if (f != null && f.getKey() != null) {
-					f.setKey(aliasCategoryJoinFilterKey(f.getKey()));
-				}
-			}
-		}
-		if (filterRequest.getFilterGroups() != null) {
-			for (FilterGroup fg : filterRequest.getFilterGroups()) {
-				rewriteCategoryJoinFilterKeysInGroup(fg);
-			}
-		}
-	}
 
-	private void rewriteCategoryJoinFilterKeysInGroup(FilterGroup group)
-	{
-		if (group == null) {
-			return;
-		}
-		if (group.getFilters() != null) {
-			for (Filter f : group.getFilters()) {
-				if (f != null && f.getKey() != null) {
-					f.setKey(aliasCategoryJoinFilterKey(f.getKey()));
-				}
-			}
-		}
-		if (group.getFilterGroups() != null) {
-			for (FilterGroup sub : group.getFilterGroups()) {
-				rewriteCategoryJoinFilterKeysInGroup(sub);
-			}
-		}
-	}
-
-	private static String aliasCategoryJoinFilterKey(String key)
-	{
-		if (key.startsWith("category.")) {
-			return "c." + key.substring("category.".length());
-		}
 		if (key.startsWith("categories.")) {
-			return "c." + key.substring("categories.".length());
+			return "category." + key.substring("categories.".length());
 		}
-		return key;
+
+		if (key.contains(".")) {
+			return "p." + key;
+		}
+
+		return "p." + key;
 	}
 
 	private ProductListItemDto toProductListItemDto(ProductEntity product)
@@ -434,10 +450,10 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 	private List<ProductImageDto> findProductImages(UUID productId)
 	{
 		return getEntityManager().createQuery(
-						"select pi from ProductImageEntity pi " +
-								"where pi.productVariant.product.id = :productId " +
-								"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc",
-						ProductImageEntity.class)
+				"select pi from ProductImageEntity pi " +
+				"where pi.productVariant.product.id = :productId " +
+				"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc",
+				ProductImageEntity.class)
 				.setParameter("productId", productId)
 				.getResultList()
 				.stream()
@@ -460,12 +476,12 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
 		TypedQuery<VariantPricesEntity> query = getEntityManager().createQuery(
 				"select vp from VariantPricesEntity vp " +
-						"join vp.variant v " +
-						"where v.product.id = :productId " +
-						"and vp.priceType = :priceType " +
-						"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-						"and (vp.priceEndDate is null or vp.priceEndDate >= :now) " +
-						"order by vp.price asc, coalesce(vp.priceStartDate, :veryOldDate) asc, vp.createdAt asc",
+				"join vp.variant v " +
+				"where v.product.id = :productId " +
+				"and vp.priceType = :priceType " +
+				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+				"and (vp.priceEndDate is null or vp.priceEndDate >= :now) " +
+				"order by vp.price asc, coalesce(vp.priceStartDate, :veryOldDate) asc, vp.createdAt asc",
 				VariantPricesEntity.class);
 
 		List<VariantPricesEntity> prices = query
@@ -522,12 +538,12 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		List<Object[]> rows = getEntityManager()
 				.createQuery(
 						"select oi.variant.product.id, sum(oi.quantity) as total " +
-								"from OrderItemEntity oi " +
-								"join oi.orderEntity o " +
-								"where o.status = :status " +
-								"and oi.variant is not null " +
-								"group by oi.variant.product.id " +
-								"order by total desc",
+						"from OrderItemEntity oi " +
+						"join oi.orderEntity o " +
+						"where o.status = :status " +
+						"and oi.variant is not null " +
+						"group by oi.variant.product.id " +
+						"order by total desc",
 						Object[].class)
 				.setParameter("status", OrderStatusEn.DELIVERED)
 				.setMaxResults(TARGET)
@@ -564,9 +580,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		List<ProductEntity> unordered = getEntityManager()
 				.createQuery(
 						"select p from ProductEntity p " +
-								"left join fetch p.categories " +
-								"left join fetch p.brand " +
-								"where p.id in :ids",
+						"left join fetch p.categories " +
+						"left join fetch p.brand " +
+						"where p.id in :ids",
 						ProductEntity.class)
 				.setParameter("ids", ids)
 				.getResultList();
@@ -590,18 +606,18 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		if (excludeIds == null || excludeIds.isEmpty()) {
 			q = getEntityManager().createQuery(
 					"select p from ProductEntity p " +
-							"left join fetch p.categories " +
-							"left join fetch p.brand " +
-							"order by function('random')",
+					"left join fetch p.categories " +
+					"left join fetch p.brand " +
+					"order by function('random')",
 					ProductEntity.class);
 		} else {
 			q = getEntityManager().createQuery(
-							"select p from ProductEntity p " +
-									"left join fetch p.categories " +
-									"left join fetch p.brand " +
-									"where p.id not in :excludeIds " +
-									"order by function('random')",
-							ProductEntity.class)
+					"select p from ProductEntity p " +
+					"left join fetch p.categories " +
+					"left join fetch p.brand " +
+					"where p.id not in :excludeIds " +
+					"order by function('random')",
+					ProductEntity.class)
 					.setParameter("excludeIds", excludeIds);
 		}
 		return q.setMaxResults(limit).getResultList();
