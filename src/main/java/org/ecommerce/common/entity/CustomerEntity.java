@@ -58,6 +58,12 @@ public class CustomerEntity extends PanacheEntityBase {
     @Column(name = "last_login")
     public LocalDateTime passwordUpdatedAt;
 
+    @Column(name = "reset_token")
+    public String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    public LocalDateTime resetTokenExpiry;
+
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
 
