@@ -1,6 +1,9 @@
 package org.ecommerce.common.dto;
 
-public class CustomerProfileDto {
+import java.util.UUID;
+
+public class WholesaleCustomerDto {
+    private UUID id;
     private String email;
     private String firstName;
     private String lastName;
@@ -10,9 +13,10 @@ public class CustomerProfileDto {
     private String city;
     private String province;
     private String postalCode;
-    private String shopperType;
     private String status;
-    private boolean hasPassword;
+
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -41,12 +45,7 @@ public class CustomerProfileDto {
     public String getPostalCode() { return postalCode; }
     public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
 
-    public String getShopperType() { return shopperType; }
-    public void setShopperType(String shopperType) { this.shopperType = shopperType; }
-
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-
-    public boolean isHasPassword() { return hasPassword; }
-    public void setHasPassword(boolean hasPassword) { this.hasPassword = hasPassword; }
 }
+

@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.ecommerce.common.enums.CustomerStatusEn;
 import org.ecommerce.common.enums.CustomerTypeEn;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -24,6 +25,10 @@ public class CustomerEntity extends PanacheEntityBase {
     @Enumerated(EnumType.STRING)
     @Column(name = "shopper_type")
     public CustomerTypeEn shopperType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    public CustomerStatusEn status = CustomerStatusEn.REGISTERING;
 
     @Column(unique = true, nullable = false)
     public String email;
