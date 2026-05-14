@@ -3,10 +3,16 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.UuidGenerator;
+import org.ecommerce.common.enums.WholesaleApplicationStatusEn;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -21,26 +27,40 @@ public class WholesaleApplicationEntity extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
+    @Column(name = "account_email", nullable = false, unique = true)
+    public String accountEmail;
+
+    @Column(name = "first_name", nullable = false)
+    public String firstName;
+
+    @Column(name = "last_name")
+    public String lastName;
+
+    @Column(name = "phone")
+    public String phone;
+
     @Column(name = "company_name", nullable = false)
     public String companyName;
 
     @Column(name = "vat_number")
     public String vatNumber;
 
-    @Column(name = "contact_email", nullable = false, unique = true)
-    public String contactEmail;
+    @Column(name = "reg_number")
+    public String regNumber;
 
-    @Column(name = "contact_phone")
-    public String contactPhone;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    public String status = "PENDING";
+    public WholesaleApplicationStatusEn status = WholesaleApplicationStatusEn.PENDING;
 
     @Column(name = "notes")
     public String notes;
 
     @Column(name = "created_at")
     public OffsetDateTime createdAt = OffsetDateTime.now();
+
+    @Column(name = "processed_at")
+    public OffsetDateTime processedAt;
 
     @Column(name = "physical_address_line1")
     public String physicalAddressLine1;
@@ -77,5 +97,9 @@ public class WholesaleApplicationEntity extends PanacheEntityBase {
 
     @Column(name = "postal_postal_code")
     public String postalPostalCode;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", unique = true)
+    public CustomerEntity customer;
 }
 
