@@ -41,18 +41,44 @@ public class CustomerEntity extends PanacheEntityBase {
 
     public String phone;
 
-    // --- Default Shipping / Billing Address ---
-    @Column(name = "address_line_1")
-    public String addressLine1;
+    @Column(name = "physical_address_line1")
+    public String physicalAddressLine1;
 
-    @Column(name = "address_line_2")
-    public String addressLine2;
+    @Column(name = "physical_address_line2")
+    public String physicalAddressLine2;
 
-    public String city;
-    public String province;
+    @Column(name = "physical_suburb")
+    public String physicalSuburb;
 
-    @Column(name = "postal_code")
-    public String postalCode;
+    @Column(name = "physical_city")
+    public String physicalCity;
+
+    @Column(name = "physical_province")
+    public String physicalProvince;
+
+    @Column(name = "physical_postal_code")
+    public String physicalPostalCode;
+
+    @Column(name = "postal_address_line1")
+    public String postalAddressLine1;
+
+    @Column(name = "postal_address_line2")
+    public String postalAddressLine2;
+
+    @Column(name = "postal_suburb")
+    public String postalSuburb;
+
+    @Column(name = "postal_city")
+    public String postalCity;
+
+    @Column(name = "postal_province")
+    public String postalProvince;
+
+    @Column(name = "postal_postal_code")
+    public String postalPostalCode;
+
+    @Column(name = "additional_info", length = 1025, nullable = false)
+    public String additionalInfo = "{}";
 
     @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL)
     public List<OrderEntity> orderEntities;
