@@ -54,6 +54,18 @@ public class UserEntity extends PanacheEntityBase {
     @Column(name = "reset_token_expiry")
     public OffsetDateTime resetTokenExpiry;
 
+    @Column(name = "password_reset_code_hash")
+    public String passwordResetCodeHash;
+
+    @Column(name = "password_reset_code_expiry")
+    public OffsetDateTime passwordResetCodeExpiry;
+
+    @Column(name = "password_reset_code_attempts")
+    public int passwordResetCodeAttempts = 0;
+
+    @Column(name = "password_reset_code_locked_until")
+    public OffsetDateTime passwordResetCodeLockedUntil;
+
     // ── Relationships ───────────────────────────────────────────────────────
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     public CustomerEntity customer;
