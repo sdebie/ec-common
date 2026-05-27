@@ -1,6 +1,7 @@
 package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import org.ecommerce.common.entity.CountrySettingsEntity;
 import org.ecommerce.common.entity.ShippingMethodEntity;
 import org.ecommerce.common.entity.StoreSettingsEntity;
 
@@ -15,6 +16,10 @@ public class SettingsRepository extends BaseRepository<StoreSettingsEntity, Stri
 
     public List<ShippingMethodEntity> getAllShippingMethods() {
         return ShippingMethodEntity.listAll();
+    }
+
+    public List<CountrySettingsEntity> getAllCountrySettings() {
+        return CountrySettingsEntity.listAll();
     }
 
     public void saveStoreSettings(StoreSettingsEntity entity) {

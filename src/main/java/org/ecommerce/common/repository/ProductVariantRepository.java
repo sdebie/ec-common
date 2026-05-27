@@ -65,7 +65,7 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
 
     /**
      * Fetch all variants that carry an active RETAIL_SALE_PRICE or WHOLESALE_SALE_PRICE.
-     * Eagerly loads the parent product and its category to avoid N+1 queries.
+     * Eagerly loads the parent product and its categories to avoid N+1 queries.
      */
     public List<ProductVariantEntity> findOnSaleVariants(PageRequest pageRequest)
     {
@@ -77,7 +77,7 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return find(
                 "select v from ProductVariantEntity v " +
                 "left join fetch v.product p " +
-                "left join fetch p.category " +
+                "left join fetch p.categories " +
                 "where v.id in (" +
                 "  select v2.id from ProductVariantEntity v2 " +
                 "  join VariantPricesEntity vp on vp.variant = v2 " +
