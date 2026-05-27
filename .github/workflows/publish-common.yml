@@ -1,0 +1,17 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: go-bss/platform-templates/.github/workflows/build-jar.yml@main
+    secrets: inherit

@@ -1,6 +1,11 @@
 package org.ecommerce.common.dto;
 
-public class CustomerProfileDto {
+import org.ecommerce.common.enums.WholesaleCustomerStatusEn;
+
+import java.util.UUID;
+
+public class WholesaleCustomerDto {
+    private UUID id;
     private String email;
     private String firstName;
     private String lastName;
@@ -17,10 +22,14 @@ public class CustomerProfileDto {
     private String postalCity;
     private String postalProvince;
     private String postalPostalCode;
-    private String shopperType;
-    private String status;
-    private String additionalInfo;
-    private boolean hasPassword;
+    private String companyName;
+    private String vatNumber;
+    private String regNumber;
+    private String notes;
+    private WholesaleCustomerStatusEn status;
+
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -70,15 +79,19 @@ public class CustomerProfileDto {
     public String getPostalPostalCode() { return postalPostalCode; }
     public void setPostalPostalCode(String postalPostalCode) { this.postalPostalCode = postalPostalCode; }
 
-    public String getShopperType() { return shopperType; }
-    public void setShopperType(String shopperType) { this.shopperType = shopperType; }
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getVatNumber() { return vatNumber; }
+    public void setVatNumber(String vatNumber) { this.vatNumber = vatNumber; }
 
-    public String getAdditionalInfo() { return additionalInfo; }
-    public void setAdditionalInfo(String additionalInfo) { this.additionalInfo = additionalInfo; }
+    public String getRegNumber() { return regNumber; }
+    public void setRegNumber(String regNumber) { this.regNumber = regNumber; }
 
-    public boolean isHasPassword() { return hasPassword; }
-    public void setHasPassword(boolean hasPassword) { this.hasPassword = hasPassword; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
+
+    public WholesaleCustomerStatusEn getStatus() { return status; }
+    public void setStatus(WholesaleCustomerStatusEn status) { this.status = status; }
 }
+

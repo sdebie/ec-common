@@ -3,13 +3,21 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.ecommerce.common.enums.CustomerStatusEn;
 import org.ecommerce.common.enums.CustomerTypeEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Customer profile (maps to the {@code customers} table).
+ * Authentication credentials and security tokens live in the linked {@link UserEntity}.
+ * Addresses live in {@link CustomerAddressEntity}.
+ * Contacts live in {@link CustomerContactEntity}.
+ * Wholesale-specific data lives in {@link WholesaleProfileEntity}.
+ */
 @Entity
 @Getter
 @Table(name = "customers")
@@ -21,13 +29,12 @@ public class CustomerEntity extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "shopper_type")
-    public CustomerTypeEn shopperType;
+    // ── Link to user account ────────────────────────────────────────────────
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    public UserEntity user;
 
-    @Column(unique = true, nullable = false)
-    public String email;
-
+    // ── Profile ─────────────────────────────────────────────────────────────
     @Column(name = "first_name")
     public String firstName;
 
@@ -36,36 +43,34 @@ public class CustomerEntity extends PanacheEntityBase {
 
     public String phone;
 
-    // --- Default Shipping / Billing Address ---
-    @Column(name = "address_line_1")
-    public String addressLine1;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shopper_type")
+    public CustomerTypeEn shopperType;
 
-    @Column(name = "address_line_2")
-    public String addressLine2;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    public CustomerStatusEn status = CustomerStatusEn.PENDING;
 
-    public String city;
-    public String province;
+    // ── Relationships ────────────────────────────────────────────────────────
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    public List<CustomerAddressEntity> addresses = new ArrayList<>();
 
-    @Column(name = "postal_code")
-    public String postalCode;
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    public List<CustomerContactEntity> contacts = new ArrayList<>();
+
+    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    public WholesaleProfileEntity wholesaleProfile;
 
     @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL)
     public List<OrderEntity> orderEntities;
 
-    @Column(name = "password_hash")
-    public String passwordHash;
-
-    @Column(name = "last_login")
-    public LocalDateTime passwordUpdatedAt;
-
-    @Column(name = "created_at")
-    public LocalDateTime createdAt = LocalDateTime.now();
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
-     * Helper to find a customer by email (useful for logins/lookups)
+     * Finds a customer by the email stored on the linked {@link UserEntity}.
      */
     public static CustomerEntity findByEmail(String email) {
-        return find("email", email).firstResult();
+        return find("lower(user.email) = lower(?1)", email).firstResult();
     }
 
 }
