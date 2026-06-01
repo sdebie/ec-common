@@ -16,7 +16,7 @@ import java.util.UUID;
 public class OrderDetailRespDto {
     // OrderEntity fields
     public UUID id;
-    public CustomerEntity customerEntity;
+    public CustomerDetailDto customerEntity;
     public BigDecimal totalAmount;
     public UUID sessionId;
     public OrderStatusEn status;
@@ -26,7 +26,7 @@ public class OrderDetailRespDto {
     public String shippingCity;
     public String shippingProvince;
     public String shippingPostalCode;
-    public List<OrderItemEntity> items = new ArrayList<>();
+    public List<OrderItemDetailDto> items = new ArrayList<>(); // Changed to OrderItemDetailDto
     public LocalDateTime createdAt;
 
     // OrderStatusHistoryEntity fields wrapped as detail rows
