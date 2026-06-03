@@ -157,6 +157,45 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 .toList();
  }
 
+	public long countShoppingProducts(FilterRequest filterRequest)
+	{
+		LocalDateTime now = LocalDateTime.now();
+		List<PriceTypeEn> shoppingPriceTypes = List.of(
+				PriceTypeEn.RETAIL_PRICE,
+				PriceTypeEn.WHOLESALE_PRICE,
+				PriceTypeEn.RETAIL_SALE_PRICE,
+				PriceTypeEn.WHOLESALE_SALE_PRICE);
+		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+
+		String hql = "select count(distinct p) from ProductEntity p " +
+				(hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
+				"where exists (" +
+				"select 1 from ProductVariantEntity v " +
+				"join VariantPricesEntity vp on vp.variant = v " +
+				"where v.product = p " +
+				"and vp.priceType in :priceTypes " +
+				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+				")";
+
+		if (queryBuilder.hasQuery()) {
+			hql += " AND " + queryBuilder.query();
+		}
+
+		TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
+		q.setParameter("priceTypes", shoppingPriceTypes);
+		q.setParameter("now", now);
+		if (queryBuilder.hasParams()) {
+			for (Map.Entry<String, Object> entry : queryBuilder.params().entrySet()) {
+				q.setParameter(entry.getKey(), entry.getValue());
+			}
+		}
+
+		Long result = q.getSingleResult();
+		return result != null ? result : 0L;
+	}
+
 	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest)
 	{
 		LocalDateTime now = LocalDateTime.now();
