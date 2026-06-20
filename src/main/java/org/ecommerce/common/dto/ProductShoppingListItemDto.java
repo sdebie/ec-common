@@ -22,6 +22,9 @@ public class ProductShoppingListItemDto {
     @Description("Product type (e.g. SIMPLE or VARIABLE)")
     public String productType;
 
+    @Description("Product status")
+    public String status;
+
     @Description("Total number of variants for this product")
     public Integer variantCount;
 

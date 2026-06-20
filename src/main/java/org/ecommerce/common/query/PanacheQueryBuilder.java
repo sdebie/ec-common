@@ -2,6 +2,7 @@ package org.ecommerce.common.query;
 
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.enums.LogicalOperator;
 import org.ecommerce.common.query.enums.SortDirection;
 
@@ -130,13 +131,16 @@ public class PanacheQueryBuilder
         String field = sanitize(filter.getKey());
         String p = "p" + seq++;
 
+        // Check if this is a status field that needs enum conversion
+        boolean isStatusField = field.contains("status");
+
         return switch (filter.getOperator()) {
             case EQUALS -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, isStatusField ? coerceEnum(filter.getValue()) : coerce(filter.getValue()));
                 yield field + " = :" + p;
             }
             case NOT_EQUALS -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, isStatusField ? coerceEnum(filter.getValue()) : coerce(filter.getValue()));
                 yield field + " != :" + p;
             }
             case GREATER_THAN -> {
@@ -156,11 +160,11 @@ public class PanacheQueryBuilder
                 yield field + " <= :" + p;
             }
             case IN -> {
-                bind(p, coerceList(filter.getValues()));
+                bind(p, isStatusField ? coerceEnumList(filter.getValues()) : coerceList(filter.getValues()));
                 yield field + " IN (:" + p + ")";
             }
             case NOT_IN -> {
-                bind(p, coerceList(filter.getValues()));
+                bind(p, isStatusField ? coerceEnumList(filter.getValues()) : coerceList(filter.getValues()));
                 yield field + " NOT IN (:" + p + ")";
             }
             case LIKE -> {
@@ -188,6 +192,31 @@ public class PanacheQueryBuilder
     private void bind(String key, Object value)
     {
         paramMap.put(key, value);
+    }
+
+    /**
+     * Coerce string value to ProductStatusEn enum.
+     */
+    protected Object coerceEnum(String value)
+    {
+        if (value == null) return null;
+        try {
+            return ProductStatusEn.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            // If enum conversion fails, return the original value
+            return value;
+        }
+    }
+
+    /**
+     * Coerce list of string values to ProductStatusEn enums.
+     */
+    protected List<Object> coerceEnumList(List<String> values)
+    {
+        if (values == null) return Collections.emptyList();
+        List<Object> out = new ArrayList<>();
+        for (String v : values) out.add(coerceEnum(v));
+        return out;
     }
 
     /**

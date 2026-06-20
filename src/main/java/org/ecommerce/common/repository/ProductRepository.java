@@ -12,6 +12,7 @@ import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.enums.PriceTypeEn;
+import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.enums.ProductTypeEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.Filter;
@@ -61,7 +62,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.firstResult();
 	}
 
-	public List<ProductListItemDto> findAllProductListItems(PageRequest pageRequest, FilterRequest filterRequest)
+	public List<ProductListItemDto> findAllProductListItems(PageRequest pageRequest, FilterRequest filterRequest, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
 		List<PriceTypeEn> basePriceTypes = List.of(
@@ -78,6 +79,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -95,6 +97,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		Map<String, Object> params = new LinkedHashMap<>();
 		params.put("priceTypes", basePriceTypes);
 		params.put("now", now);
+		if (!ignoreStatus) {
+			params.put("variantStatus", ProductStatusEn.ACTIVE);
+		}
 		if (queryBuilder.hasParams()) {
 			params.putAll(queryBuilder.params());
 		}
@@ -105,7 +110,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.toList();
 	}
 
- public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds)
+	 public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds, boolean ignoreStatus)
  {
 	 if (categoryIds == null || categoryIds.isEmpty()) {
 		 return Collections.emptyList();
@@ -132,6 +137,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 "select 1 from ProductVariantEntity v " +
 			 "join VariantPricesEntity vp on vp.variant = v " +
 			 "where v.product = p " +
+	 			 (ignoreStatus ? "" : "and v.status = :variantStatus ") +
 			 "and vp.priceType in :priceTypes " +
 			 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 			 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -147,6 +153,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 	 params.put("categoryIds", categoryIds);
 	 params.put("priceTypes", basePriceTypes);
 	 params.put("now", now);
+	 	 if (!ignoreStatus) {
+	 	 	 params.put("variantStatus", ProductStatusEn.ACTIVE);
+	 	 }
 	 if (queryBuilder.hasParams()) {
 		 params.putAll(queryBuilder.params());
 	 }
@@ -157,7 +166,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 .toList();
  }
 
-	public long countShoppingProducts(FilterRequest filterRequest)
+	public long countShoppingProducts(FilterRequest filterRequest, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
 		List<PriceTypeEn> shoppingPriceTypes = List.of(
@@ -174,6 +183,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -186,6 +196,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
 		q.setParameter("priceTypes", shoppingPriceTypes);
 		q.setParameter("now", now);
+		if (!ignoreStatus) {
+			q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+		}
 		if (queryBuilder.hasParams()) {
 			for (Map.Entry<String, Object> entry : queryBuilder.params().entrySet()) {
 				q.setParameter(entry.getKey(), entry.getValue());
@@ -196,7 +209,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		return result != null ? result : 0L;
 	}
 
-	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest)
+	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
 		List<PriceTypeEn> shoppingPriceTypes = List.of(
@@ -215,6 +228,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -229,17 +243,20 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		Map<String, Object> params = new LinkedHashMap<>();
 		params.put("priceTypes", shoppingPriceTypes);
 		params.put("now", now);
+		if (!ignoreStatus) {
+			params.put("variantStatus", ProductStatusEn.ACTIVE);
+		}
 		if (queryBuilder.hasParams()) {
 			params.putAll(queryBuilder.params());
 		}
 
 		return find(query, params)
 				.page(queryBuilder.page(pageRequest)).list().stream()
-				.map(product -> toShoppingListItemDto(product, now))
+				.map(product -> toShoppingListItemDto(product, now, ignoreStatus))
 				.toList();
 	}
 
-	public List<ProductShoppingListItemDto> findOnSaleShoppingProductList(PageRequest pageRequest)
+	public List<ProductShoppingListItemDto> findOnSaleShoppingProductList(PageRequest pageRequest, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
 		List<PriceTypeEn> salePriceTypes = List.of(
@@ -253,19 +270,26 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
 				") " +
 				"order by p.name asc";
 
-		return find(query,
-					Map.of("priceTypes", salePriceTypes, "now", now))
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("priceTypes", salePriceTypes);
+		params.put("now", now);
+		if (!ignoreStatus) {
+			params.put("variantStatus", ProductStatusEn.ACTIVE);
+		}
+
+		return find(query, params)
 				.page(Page.of(
 						pageRequest != null ? pageRequest.getPageIndex() : 0,
 						pageRequest != null ? pageRequest.getPageSize() : 10))
 				.list().stream()
-				.map(product -> toShoppingListItemDto(product, now))
+				.map(product -> toShoppingListItemDto(product, now, ignoreStatus))
 				.toList();
 	}
 
@@ -435,7 +459,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 					.toList();
 		}
 
-		return new ProductListItemDto(
+		ProductListItemDto dto = new ProductListItemDto(
 				product.id == null ? null : product.id.toString(),
 				product.name,
 				product.description,
@@ -443,58 +467,75 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				Collections.emptyList(),
 				categoryNames,
 				product.brand != null ? product.brand.name : null);
+		dto.status = product.status == null ? null : product.status.name();
+		return dto;
 	}
 
-	private ProductShoppingListItemDto toShoppingListItemDto(ProductEntity product, LocalDateTime now)
+	private ProductShoppingListItemDto toShoppingListItemDto(ProductEntity product, LocalDateTime now, boolean ignoreStatus)
 	{
 		ProductShoppingListItemDto dto = new ProductShoppingListItemDto();
 		dto.id = product.id == null ? null : product.id.toString();
 		dto.name = product.name;
 		dto.shortDescription = product.shorDescription;
 		dto.productType = product.productType == null ? null : product.productType.name();
-		dto.variantCount = product.id == null ? 0 : countVariants(product.id);
+		dto.status = product.status == null ? null : product.status.name();
+		dto.variantCount = product.id == null ? 0 : countVariants(product.id, ignoreStatus);
 		dto.variantId = product.id == null || product.productType != ProductTypeEn.SIMPLE
 				? null
-				: findFirstVariantId(product.id);
-		dto.images = product.id == null ? List.of() : findProductImages(product.id);
-		dto.retailPrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_PRICE, now);
-		dto.wholesalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_PRICE, now);
-		dto.retailSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_SALE_PRICE, now);
-		dto.wholesaleSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_SALE_PRICE, now);
+				: findFirstVariantId(product.id, ignoreStatus);
+		dto.images = product.id == null ? List.of() : findProductImages(product.id, ignoreStatus);
+		dto.retailPrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_PRICE, now, ignoreStatus);
+		dto.wholesalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_PRICE, now, ignoreStatus);
+		dto.retailSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_SALE_PRICE, now, ignoreStatus);
+		dto.wholesaleSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_SALE_PRICE, now, ignoreStatus);
 		return dto;
 	}
 
-	private String findFirstVariantId(UUID productId)
+	private String findFirstVariantId(UUID productId, boolean ignoreStatus)
 	{
-		List<UUID> variantIds = getEntityManager()
-				.createQuery(
-						"select v.id from ProductVariantEntity v where v.product.id = :productId order by v.id asc",
-						UUID.class)
+		String query = "select v.id from ProductVariantEntity v where v.product.id = :productId " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
+				"order by v.id asc";
+
+		TypedQuery<UUID> typedQuery = getEntityManager()
+				.createQuery(query, UUID.class)
 				.setParameter("productId", productId)
-				.setMaxResults(1)
-				.getResultList();
+				.setMaxResults(1);
+		if (!ignoreStatus) {
+			typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+		}
+
+		List<UUID> variantIds = typedQuery.getResultList();
 
 		return variantIds.isEmpty() ? null : variantIds.get(0).toString();
 	}
 
-	private Integer countVariants(UUID productId)
+	private Integer countVariants(UUID productId, boolean ignoreStatus)
 	{
-		Long count = getEntityManager()
-				.createQuery("select count(v.id) from ProductVariantEntity v where v.product.id = :productId", Long.class)
-				.setParameter("productId", productId)
-				.getSingleResult();
+		String query = "select count(v.id) from ProductVariantEntity v where v.product.id = :productId " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus");
+		TypedQuery<Long> typedQuery = getEntityManager()
+				.createQuery(query, Long.class)
+				.setParameter("productId", productId);
+		if (!ignoreStatus) {
+			typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+		}
+		Long count = typedQuery.getSingleResult();
 		return count == null ? 0 : count.intValue();
 	}
 
-	private List<ProductImageDto> findProductImages(UUID productId)
+	private List<ProductImageDto> findProductImages(UUID productId, boolean ignoreStatus)
 	{
-		return getEntityManager().createQuery(
-				"select pi from ProductImageEntity pi " +
+		String query = "select pi from ProductImageEntity pi " +
 				"where pi.productVariant.product.id = :productId " +
-				"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc",
-				ProductImageEntity.class)
-				.setParameter("productId", productId)
-				.getResultList()
+				(ignoreStatus ? "" : "and pi.productVariant.status = :variantStatus ") +
+				"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc";
+		TypedQuery<ProductImageEntity> typedQuery = getEntityManager().createQuery(query, ProductImageEntity.class)
+				.setParameter("productId", productId);
+		if (!ignoreStatus) {
+			typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+		}
+		return typedQuery.getResultList()
 				.stream()
 				.map(this::toProductImageDto)
 				.toList();
@@ -509,27 +550,31 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				Boolean.TRUE.equals(image.isFeatured));
 	}
 
-	private VariantPriceDto findLowestActivePrice(UUID productId, PriceTypeEn priceType, LocalDateTime now)
+	private VariantPriceDto findLowestActivePrice(UUID productId, PriceTypeEn priceType, LocalDateTime now, boolean ignoreStatus)
 	{
 		LocalDateTime veryOldDate = LocalDateTime.of(1970, 1, 1, 0, 0);
 
-		TypedQuery<VariantPricesEntity> query = getEntityManager().createQuery(
-				"select vp from VariantPricesEntity vp " +
+		String queryString = "select vp from VariantPricesEntity vp " +
 				"join vp.variant v " +
 				"where v.product.id = :productId " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType = :priceType " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now) " +
-				"order by vp.price asc, coalesce(vp.priceStartDate, :veryOldDate) asc, vp.createdAt asc",
-				VariantPricesEntity.class);
+				"order by vp.price asc, coalesce(vp.priceStartDate, :veryOldDate) asc, vp.createdAt asc";
 
-		List<VariantPricesEntity> prices = query
-				.setParameter("productId", productId)
+		TypedQuery<VariantPricesEntity> query = getEntityManager().createQuery(queryString, VariantPricesEntity.class);
+
+		query.setParameter("productId", productId)
 				.setParameter("priceType", priceType)
 				.setParameter("now", now)
 				.setParameter("veryOldDate", veryOldDate)
-				.setMaxResults(1)
-				.getResultList();
+				.setMaxResults(1);
+		if (!ignoreStatus) {
+			query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+		}
+
+		List<VariantPricesEntity> prices = query.getResultList();
 
 		if (prices.isEmpty()) {
 			return null;
@@ -604,7 +649,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		}
 
 		return result.stream()
-				.map(p -> toShoppingListItemDto(p, now))
+				.map(p -> toShoppingListItemDto(p, now, true))
 				.collect(Collectors.toList());
 	}
 

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import org.ecommerce.common.enums.ProductTypeEn;
+import org.ecommerce.common.enums.ProductStatusEn;
 
 @Entity
 @Table(name = "products")
@@ -56,6 +57,10 @@ public class ProductEntity extends PanacheEntityBase {
     @Enumerated(EnumType.STRING)
     @Column(name = "product_type")
     public ProductTypeEn productType; // SIMPLE or VARIABLE
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    public ProductStatusEn status; // PENDING, ACTIVE, DISABLED
 
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
