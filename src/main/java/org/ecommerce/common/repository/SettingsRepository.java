@@ -10,6 +10,12 @@ import java.util.List;
 @ApplicationScoped
 public class SettingsRepository extends BaseRepository<StoreSettingsEntity, String>{
 
+    @Override
+    protected Class<StoreSettingsEntity> getEntityClass()
+    {
+        return StoreSettingsEntity.class;
+    }
+
     public List<StoreSettingsEntity> getAllStoreSettings() {
         return StoreSettingsEntity.listAll();
     }

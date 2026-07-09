@@ -8,6 +8,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class BrandRepository extends BaseRepository<BrandEntity, UUID>
 {
+    @Override
+    protected Class<BrandEntity> getEntityClass()
+    {
+        return BrandEntity.class;
+    }
+
     public BrandEntity findBySlugIgnoreCase(String slug)
     {
         if (slug == null || slug.isBlank()) {

@@ -5,5 +5,11 @@ import org.ecommerce.common.entity.ProductUploadBatchEntity;
 import java.util.UUID;
 
 @ApplicationScoped
-public class ProductImportRepository extends BaseRepository<ProductUploadBatchEntity, UUID> {
+public class ProductImportRepository extends BaseRepository<ProductUploadBatchEntity, UUID>
+{
+    @Override
+    protected Class<ProductUploadBatchEntity> getEntityClass()
+    {
+        return ProductUploadBatchEntity.class;
+    }
 }

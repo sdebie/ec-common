@@ -35,6 +35,12 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 {
+	@Override
+	protected Class<ProductEntity> getEntityClass()
+	{
+		return ProductEntity.class;
+	}
+
 	public ProductEntity findBySlugIgnoreCase(String slug)
 	{
 		if (slug == null || slug.isBlank()) {
@@ -69,7 +75,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				PriceTypeEn.RETAIL_PRICE,
 				PriceTypeEn.WHOLESALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.categories " +
@@ -121,7 +127,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 PriceTypeEn.RETAIL_PRICE,
 			 PriceTypeEn.WHOLESALE_PRICE);
 	 FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-	 PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+	 PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 	 String query = "select distinct p from ProductEntity p " +
 			 "left join fetch p.categories " +
@@ -175,7 +181,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				PriceTypeEn.RETAIL_SALE_PRICE,
 				PriceTypeEn.WHOLESALE_SALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 		String hql = "select count(distinct p) from ProductEntity p " +
 				(hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
@@ -218,7 +224,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				PriceTypeEn.RETAIL_SALE_PRICE,
 				PriceTypeEn.WHOLESALE_SALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.categories " +
@@ -476,6 +482,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		ProductShoppingListItemDto dto = new ProductShoppingListItemDto();
 		dto.id = product.id == null ? null : product.id.toString();
 		dto.name = product.name;
+		dto.slug = product.slug;
 		dto.shortDescription = product.shorDescription;
 		dto.productType = product.productType == null ? null : product.productType.name();
 		dto.status = product.status == null ? null : product.status.name();
@@ -483,7 +490,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		dto.variantId = product.id == null || product.productType != ProductTypeEn.SIMPLE
 				? null
 				: findFirstVariantId(product.id, ignoreStatus);
-		dto.images = product.id == null ? List.of() : findProductImages(product.id, ignoreStatus);
+		dto.images = product.id == null ? List.of() : findProductImages(product.id);
 		dto.retailPrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_PRICE, now, ignoreStatus);
 		dto.wholesalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_PRICE, now, ignoreStatus);
 		dto.retailSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_SALE_PRICE, now, ignoreStatus);
@@ -524,18 +531,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		return count == null ? 0 : count.intValue();
 	}
 
-	private List<ProductImageDto> findProductImages(UUID productId, boolean ignoreStatus)
+	private List<ProductImageDto> findProductImages(UUID productId)
 	{
 		String query = "select pi from ProductImageEntity pi " +
 				"where pi.productVariant.product.id = :productId " +
-				(ignoreStatus ? "" : "and pi.productVariant.status = :variantStatus ") +
 				"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc";
-		TypedQuery<ProductImageEntity> typedQuery = getEntityManager().createQuery(query, ProductImageEntity.class)
-				.setParameter("productId", productId);
-		if (!ignoreStatus) {
-			typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
-		}
-		return typedQuery.getResultList()
+		return getEntityManager().createQuery(query, ProductImageEntity.class)
+				.setParameter("productId", productId)
+				.getResultList()
 				.stream()
 				.map(this::toProductImageDto)
 				.toList();

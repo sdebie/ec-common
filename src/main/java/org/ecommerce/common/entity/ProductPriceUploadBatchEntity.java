@@ -38,5 +38,12 @@ public class ProductPriceUploadBatchEntity extends PanacheEntityBase {
 
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "completed_at")
+    public LocalDateTime completedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "approved_by")
+    public StaffUserEntity approvedBy;
 }
 

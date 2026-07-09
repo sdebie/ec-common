@@ -16,6 +16,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductVariantRepository extends BaseRepository<ProductVariantEntity, UUID>
 {
+    @Override
+    protected Class<ProductVariantEntity> getEntityClass()
+    {
+        return ProductVariantEntity.class;
+    }
+
     public ProductVariantEntity findBySku(String sku)
     {
         if (sku == null || sku.isBlank()) {

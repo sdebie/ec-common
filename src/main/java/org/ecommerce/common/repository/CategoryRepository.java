@@ -9,6 +9,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
 {
+    @Override
+    protected Class<CategoryEntity> getEntityClass()
+    {
+        return CategoryEntity.class;
+    }
+
     public CategoryEntity findBySlugIgnoreCase(String slug)
     {
         if (slug == null || slug.isBlank()) {

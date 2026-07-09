@@ -22,6 +22,6 @@ public class PageRequest
 
     public void setPageSize(int pageSize)
     {
-        this.pageSize = Math.min(Math.max(1, pageSize), 200);
+        this.pageSize = Math.max(1, pageSize);
     }
 }

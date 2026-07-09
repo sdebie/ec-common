@@ -10,6 +10,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductUploadBatchRepository extends BaseRepository<ProductUploadBatchEntity, UUID>
 {
+    @Override
+    protected Class<ProductUploadBatchEntity> getEntityClass()
+    {
+        return ProductUploadBatchEntity.class;
+    }
+
 	public List<ProductUploadBatchEntity> listAllOrderByCreatedAtDesc()
 	{
 		return listAll(Sort.by("createdAt", Sort.Direction.Descending)

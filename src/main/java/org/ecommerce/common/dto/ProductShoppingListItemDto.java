@@ -16,6 +16,9 @@ public class ProductShoppingListItemDto {
     @Description("Product name")
     public String name;
 
+    @Description("URL slug for routing to the product detail page")
+    public String slug;
+
     @Description("Product short description")
     public String shortDescription;
 

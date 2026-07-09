@@ -9,6 +9,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class VariantPricesRepository extends BaseRepository<VariantPricesEntity, UUID>
 {
+    @Override
+    protected Class<VariantPricesEntity> getEntityClass()
+    {
+        return VariantPricesEntity.class;
+    }
+
     public VariantPricesEntity findLatestByVariantAndType(UUID variantId, PriceTypeEn priceType)
     {
         if (variantId == null || priceType == null) {

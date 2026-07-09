@@ -12,5 +12,7 @@ public class ProductUploadBatchDto {
     public Integer skippedRows;
     public Integer validationErrorCount;
     public LocalDateTime createdAt;
+    public LocalDateTime completedAt;
     public String uploadedByUsername;
+    public String approvedByUsername;
 }

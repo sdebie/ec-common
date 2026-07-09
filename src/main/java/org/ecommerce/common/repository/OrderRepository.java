@@ -19,6 +19,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 {
+    @Override
+    protected Class<OrderEntity> getEntityClass()
+    {
+        return OrderEntity.class;
+    }
+
     public OrderEntity findOrderInfoById(UUID id)
     {
         if (id == null) {
