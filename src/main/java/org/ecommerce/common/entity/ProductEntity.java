@@ -62,6 +62,9 @@ public class ProductEntity extends PanacheEntityBase {
     @Column(name = "status")
     public ProductStatusEn status; // PENDING, ACTIVE, DISABLED
 
+    @Column(name = "is_featured", nullable = false)
+    public boolean isFeatured = false;
+
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
 
