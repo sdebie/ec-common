@@ -27,7 +27,10 @@ public class WholesaleApplicationEntity extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
-    @Column(name = "account_email", nullable = false, unique = true)
+    @Column(name = "applicant_email", nullable = false)
+    public String applicantEmail;
+
+    @Column(name = "account_email")
     public String accountEmail;
 
     @Column(name = "first_name", nullable = false)
@@ -42,11 +45,32 @@ public class WholesaleApplicationEntity extends PanacheEntityBase {
     @Column(name = "company_name", nullable = false)
     public String companyName;
 
+    @Column(name = "trading_name")
+    public String tradingName;
+
+    @Column(name = "company_phone")
+    public String companyPhone;
+
+    @Column(name = "company_email")
+    public String companyEmail;
+
     @Column(name = "vat_number")
     public String vatNumber;
 
     @Column(name = "reg_number")
     public String regNumber;
+
+    @Column(name = "finance_contact_name")
+    public String financeContactName;
+
+    @Column(name = "finance_contact_email")
+    public String financeContactEmail;
+
+    @Column(name = "finance_contact_phone")
+    public String financeContactPhone;
+
+    @Column(name = "purchase_order_required")
+    public Boolean purchaseOrderRequired = false;
 
 
     @Enumerated(EnumType.STRING)

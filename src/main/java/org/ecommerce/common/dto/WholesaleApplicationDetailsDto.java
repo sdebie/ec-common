@@ -27,9 +27,17 @@ public class WholesaleApplicationDetailsDto {
     private String postalPostalCode;
 
     private String companyName;
+    private String tradingName;
+    private String companyPhone;
+    private String companyEmail;
     private String vatNumber;
     private String regNumber;
+    private String financeContactName;
+    private String financeContactEmail;
+    private String financeContactPhone;
+    private Boolean purchaseOrderRequired;
     private String notes;
+    private String applicantEmail;
 
     private WholesaleApplicationStatusEn status;
     private OffsetDateTime createdAt;
@@ -90,14 +98,38 @@ public class WholesaleApplicationDetailsDto {
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
 
+    public String getTradingName() { return tradingName; }
+    public void setTradingName(String tradingName) { this.tradingName = tradingName; }
+
+    public String getCompanyPhone() { return companyPhone; }
+    public void setCompanyPhone(String companyPhone) { this.companyPhone = companyPhone; }
+
+    public String getCompanyEmail() { return companyEmail; }
+    public void setCompanyEmail(String companyEmail) { this.companyEmail = companyEmail; }
+
     public String getVatNumber() { return vatNumber; }
     public void setVatNumber(String vatNumber) { this.vatNumber = vatNumber; }
 
     public String getRegNumber() { return regNumber; }
     public void setRegNumber(String regNumber) { this.regNumber = regNumber; }
 
+    public String getFinanceContactName() { return financeContactName; }
+    public void setFinanceContactName(String financeContactName) { this.financeContactName = financeContactName; }
+
+    public String getFinanceContactEmail() { return financeContactEmail; }
+    public void setFinanceContactEmail(String financeContactEmail) { this.financeContactEmail = financeContactEmail; }
+
+    public String getFinanceContactPhone() { return financeContactPhone; }
+    public void setFinanceContactPhone(String financeContactPhone) { this.financeContactPhone = financeContactPhone; }
+
+    public Boolean getPurchaseOrderRequired() { return purchaseOrderRequired; }
+    public void setPurchaseOrderRequired(Boolean purchaseOrderRequired) { this.purchaseOrderRequired = purchaseOrderRequired; }
+
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public String getApplicantEmail() { return applicantEmail; }
+    public void setApplicantEmail(String applicantEmail) { this.applicantEmail = applicantEmail; }
 
     public WholesaleApplicationStatusEn getStatus() { return status; }
     public void setStatus(WholesaleApplicationStatusEn status) { this.status = status; }

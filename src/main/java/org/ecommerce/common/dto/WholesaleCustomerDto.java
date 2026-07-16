@@ -27,6 +27,14 @@ public class WholesaleCustomerDto {
     private String regNumber;
     private String notes;
     private WholesaleCustomerStatusEn status;
+    private String applicantEmail;
+    private String tradingName;
+    private String companyPhone;
+    private String companyEmail;
+    private String financeContactName;
+    private String financeContactEmail;
+    private String financeContactPhone;
+    private Boolean purchaseOrderRequired;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -93,5 +101,29 @@ public class WholesaleCustomerDto {
 
     public WholesaleCustomerStatusEn getStatus() { return status; }
     public void setStatus(WholesaleCustomerStatusEn status) { this.status = status; }
+
+    public String getApplicantEmail() { return applicantEmail; }
+    public void setApplicantEmail(String applicantEmail) { this.applicantEmail = applicantEmail; }
+
+    public String getTradingName() { return tradingName; }
+    public void setTradingName(String tradingName) { this.tradingName = tradingName; }
+
+    public String getCompanyPhone() { return companyPhone; }
+    public void setCompanyPhone(String companyPhone) { this.companyPhone = companyPhone; }
+
+    public String getCompanyEmail() { return companyEmail; }
+    public void setCompanyEmail(String companyEmail) { this.companyEmail = companyEmail; }
+
+    public String getFinanceContactName() { return financeContactName; }
+    public void setFinanceContactName(String financeContactName) { this.financeContactName = financeContactName; }
+
+    public String getFinanceContactEmail() { return financeContactEmail; }
+    public void setFinanceContactEmail(String financeContactEmail) { this.financeContactEmail = financeContactEmail; }
+
+    public String getFinanceContactPhone() { return financeContactPhone; }
+    public void setFinanceContactPhone(String financeContactPhone) { this.financeContactPhone = financeContactPhone; }
+
+    public Boolean getPurchaseOrderRequired() { return purchaseOrderRequired; }
+    public void setPurchaseOrderRequired(Boolean purchaseOrderRequired) { this.purchaseOrderRequired = purchaseOrderRequired; }
 }
 
