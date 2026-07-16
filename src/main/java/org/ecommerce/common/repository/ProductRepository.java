@@ -172,14 +172,12 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 .toList();
  }
 
-	public long countShoppingProducts(FilterRequest filterRequest, boolean ignoreStatus)
+	public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
-		List<PriceTypeEn> shoppingPriceTypes = List.of(
-				PriceTypeEn.RETAIL_PRICE,
-				PriceTypeEn.WHOLESALE_PRICE,
-				PriceTypeEn.RETAIL_SALE_PRICE,
-				PriceTypeEn.WHOLESALE_SALE_PRICE);
+		List<PriceTypeEn> shoppingPriceTypes = onSale
+				? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
+				: List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
 		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
@@ -215,14 +213,12 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		return result != null ? result : 0L;
 	}
 
-	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest, boolean ignoreStatus)
+	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
-		List<PriceTypeEn> shoppingPriceTypes = List.of(
-				PriceTypeEn.RETAIL_PRICE,
-				PriceTypeEn.WHOLESALE_PRICE,
-				PriceTypeEn.RETAIL_SALE_PRICE,
-				PriceTypeEn.WHOLESALE_SALE_PRICE);
+		List<PriceTypeEn> shoppingPriceTypes = onSale
+				? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
+				: List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
 		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
