@@ -5,6 +5,7 @@ import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.PriceTypeEn;
+import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.PageRequest;
 
 import java.math.BigDecimal;
@@ -109,6 +110,46 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return BigDecimal.ZERO;
 
         //TODO::SDB Get the prices in window
+    }
+
+    /** Number of variants for a product; ACTIVE-only unless {@code ignoreStatus}. */
+    public int countForProduct(UUID productId, boolean ignoreStatus)
+    {
+        String q = "SELECT COUNT(v.id) FROM ProductVariantEntity v WHERE v.product.id = :productId " +
+                (ignoreStatus ? "" : "AND v.status = :variantStatus");
+        var query = getEntityManager().createQuery(q, Long.class).setParameter("productId", productId);
+        if (!ignoreStatus) {
+            query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        Long count = query.getSingleResult();
+        return count == null ? 0 : count.intValue();
+    }
+
+    /** First variant id (by id ASC) for a product; ACTIVE-only unless {@code ignoreStatus}. */
+    public String findFirstVariantId(UUID productId, boolean ignoreStatus)
+    {
+        String q = "SELECT v.id FROM ProductVariantEntity v WHERE v.product.id = :productId " +
+                (ignoreStatus ? "" : "AND v.status = :variantStatus ") +
+                "ORDER BY v.id ASC";
+        var query = getEntityManager().createQuery(q, UUID.class)
+                .setParameter("productId", productId)
+                .setMaxResults(1);
+        if (!ignoreStatus) {
+            query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        List<UUID> ids = query.getResultList();
+        return ids.isEmpty() ? null : ids.get(0).toString();
+    }
+
+    /** Aggregated stock across all variants of a product. */
+    public int sumStock(UUID productId)
+    {
+        Long total = getEntityManager().createQuery(
+                        "SELECT COALESCE(SUM(v.stockQuantity), 0) FROM ProductVariantEntity v WHERE v.product.id = :productId",
+                        Long.class)
+                .setParameter("productId", productId)
+                .getSingleResult();
+        return total == null ? 0 : total.intValue();
     }
 }
 

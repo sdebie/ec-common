@@ -35,7 +35,36 @@ public class ProductImageRepository implements PanacheRepository<ProductImageEnt
     }
 
     /**
-     * Find featured image for a product
+     * All images for a product, ordered for listing: featured first, then sortOrder, then id.
+     */
+    public List<ProductImageEntity> findForListing(UUID productId)
+    {
+        return getEntityManager().createQuery(
+                        "SELECT pi FROM ProductImageEntity pi " +
+                                "WHERE pi.productVariant.product.id = :productId " +
+                                "ORDER BY CASE WHEN pi.isFeatured = true THEN 0 ELSE 1 END ASC, pi.sortOrder ASC, pi.id ASC",
+                        ProductImageEntity.class)
+                .setParameter("productId", productId)
+                .getResultList();
+    }
+
+    /**
+     * The thumbnail (first image) for a variant, ordered featured-first then sortOrder then id.
+     */
+    public ProductImageEntity findThumbnailForVariant(UUID variantId)
+    {
+        List<ProductImageEntity> images = getEntityManager().createQuery(
+                        "SELECT pi FROM ProductImageEntity pi WHERE pi.productVariant.id = :variantId " +
+                                "ORDER BY CASE WHEN pi.isFeatured = true THEN 0 ELSE 1 END ASC, pi.sortOrder ASC, pi.id ASC",
+                        ProductImageEntity.class)
+                .setParameter("variantId", variantId)
+                .setMaxResults(1)
+                .getResultList();
+        return images.isEmpty() ? null : images.get(0);
+    }
+
+    /**
+     * Find a featured image for a product
      */
     public ProductImageEntity findFeaturedByProductId(UUID productId)
     {
