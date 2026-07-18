@@ -604,6 +604,13 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		int totalPages = effectivePageSize > 0
 				? (int) Math.ceil((double) totalElements / effectivePageSize)
 				: 0;
+		// A deletion or filter change can make a previously valid client page fall
+		// outside the result set between requests. Return the final available page
+		// instead of an avoidable empty page; callers can render response metadata
+		// without an effect-driven pagination correction.
+		if (totalPages > 0) {
+			effectivePageIndex = Math.min(effectivePageIndex, totalPages - 1);
+		}
 
 		String fetchHql = "SELECT DISTINCT p FROM ProductEntity p " +
 				"LEFT JOIN FETCH p.categories " +
