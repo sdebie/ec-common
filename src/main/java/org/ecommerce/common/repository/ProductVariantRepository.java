@@ -151,6 +151,35 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 .getSingleResult();
         return total == null ? 0 : total.intValue();
     }
+
+    /**
+     * Returns true if the given variant is referenced by any order_items row.
+     * Used by the Deletion Policy to prevent hard-deleting order-referenced variants.
+     */
+    public boolean isReferencedByOrders(UUID variantId)
+    {
+        if (variantId == null) return false;
+        Long count = getEntityManager().createQuery(
+                        "SELECT COUNT(oi.id) FROM OrderItemEntity oi WHERE oi.variant.id = :variantId",
+                        Long.class)
+                .setParameter("variantId", variantId)
+                .getSingleResult();
+        return count != null && count > 0;
+    }
+
+    /**
+     * Fetch all ACTIVE variants for a given product (excludes DISABLED).
+     * Used by admin-edit and storefront-detail reads so that soft-deleted variants
+     * are absent after save.
+     */
+    public List<ProductVariantEntity> findActiveVariantsForProductId(UUID productId)
+    {
+        if (productId == null) return Collections.emptyList();
+        return list(
+                "select v from ProductVariantEntity v left join fetch v.product " +
+                "where v.product.id = ?1 and v.status <> ?2 order by v.id asc",
+                productId, ProductStatusEn.DISABLED);
+    }
 }
 
 
