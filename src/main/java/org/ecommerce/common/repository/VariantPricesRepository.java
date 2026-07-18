@@ -7,6 +7,7 @@ import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.enums.ProductStatusEn;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,5 +78,37 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
                 .getResultList();
         return r.isEmpty() ? null : r.get(0);
     }
-}
 
+    /**
+     * Returns the active candidate prices for a page of products in one query.
+     * The list assembler applies the existing per-product tie-break rule in
+     * memory. Keeping the query here preserves repository ownership of reads.
+     */
+    public List<VariantPricesEntity> findActiveForProductIds(
+            List<UUID> productIds,
+            List<PriceTypeEn> priceTypes,
+            LocalDateTime now,
+            boolean ignoreStatus)
+    {
+        if (productIds == null || productIds.isEmpty() || priceTypes == null || priceTypes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String query = "SELECT vp FROM VariantPricesEntity vp " +
+                "JOIN FETCH vp.variant v " +
+                "JOIN FETCH v.product p " +
+                "WHERE p.id IN :productIds " +
+                (ignoreStatus ? "" : "AND v.status = :variantStatus ") +
+                "AND vp.priceType IN :priceTypes " +
+                "AND (vp.priceStartDate IS NULL OR vp.priceStartDate <= :now) " +
+                "AND (vp.priceEndDate IS NULL OR vp.priceEndDate >= :now)";
+        TypedQuery<VariantPricesEntity> typedQuery = getEntityManager().createQuery(query, VariantPricesEntity.class)
+                .setParameter("productIds", productIds)
+                .setParameter("priceTypes", priceTypes)
+                .setParameter("now", now);
+        if (!ignoreStatus) {
+            typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        return typedQuery.getResultList();
+    }
+}

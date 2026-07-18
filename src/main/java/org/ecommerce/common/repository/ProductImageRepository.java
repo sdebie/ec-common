@@ -49,6 +49,42 @@ public class ProductImageRepository implements PanacheRepository<ProductImageEnt
     }
 
     /**
+     * Fetches all listing images for a page of products.  The fetch joins make
+     * grouping by product and mapping the image DTO safe without lazy loads.
+     */
+    public List<ProductImageEntity> findForListingProductIds(List<UUID> productIds)
+    {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+        return getEntityManager().createQuery(
+                        "SELECT pi FROM ProductImageEntity pi " +
+                                "JOIN FETCH pi.productVariant pv " +
+                                "JOIN FETCH pv.product p " +
+                                "WHERE p.id IN :productIds " +
+                                "ORDER BY p.id ASC, CASE WHEN pi.isFeatured = true THEN 0 ELSE 1 END ASC, pi.sortOrder ASC, pi.id ASC",
+                        ProductImageEntity.class)
+                .setParameter("productIds", productIds)
+                .getResultList();
+    }
+
+    /** Fetches images for a set of variants in the same order used for thumbnails. */
+    public List<ProductImageEntity> findForVariantIds(List<UUID> variantIds)
+    {
+        if (variantIds == null || variantIds.isEmpty()) {
+            return List.of();
+        }
+        return getEntityManager().createQuery(
+                        "SELECT pi FROM ProductImageEntity pi " +
+                                "JOIN FETCH pi.productVariant pv " +
+                                "WHERE pv.id IN :variantIds " +
+                                "ORDER BY pv.id ASC, CASE WHEN pi.isFeatured = true THEN 0 ELSE 1 END ASC, pi.sortOrder ASC, pi.id ASC",
+                        ProductImageEntity.class)
+                .setParameter("variantIds", variantIds)
+                .getResultList();
+    }
+
+    /**
      * The thumbnail (first image) for a variant, ordered featured-first then sortOrder then id.
      */
     public ProductImageEntity findThumbnailForVariant(UUID variantId)

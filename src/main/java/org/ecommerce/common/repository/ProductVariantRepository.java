@@ -71,6 +71,29 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     }
 
     /**
+     * Fetches the variants for a page of products in one query.  List assemblers
+     * use this instead of issuing a variant/count query for every product.
+     */
+    public List<ProductVariantEntity> findForProductIds(List<UUID> productIds, boolean ignoreStatus)
+    {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String query = "select v from ProductVariantEntity v " +
+                "join fetch v.product " +
+                "where v.product.id in :productIds " +
+                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
+                "order by v.product.id asc, v.id asc";
+        var typedQuery = getEntityManager().createQuery(query, ProductVariantEntity.class)
+                .setParameter("productIds", productIds);
+        if (!ignoreStatus) {
+            typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        return typedQuery.getResultList();
+    }
+
+    /**
      * Fetch all variants that carry an active RETAIL_SALE_PRICE or WHOLESALE_SALE_PRICE.
      * Eagerly loads the parent product and its categories to avoid N+1 queries.
      */
@@ -181,5 +204,3 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 productId, ProductStatusEn.DISABLED);
     }
 }
-
-
