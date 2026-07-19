@@ -44,9 +44,40 @@ public final class CsvImportUtils {
             return List.of();
         }
         return Arrays.stream(imagesValue.split(","))
-                .map(CsvImportUtils::trimToNull)
+                .map(CsvImportUtils::normalizeStorageRelativePath)
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /**
+     * Normalizes a CSV image value to the storage-relative form used by
+     * ProductImageEntity (for example {@code 04/product.jpg}). WordPress
+     * exports commonly prefix that value with a slash; storing it without the
+     * prefix keeps filesystem validation and URL construction consistent.
+     *
+     * Path traversal is deliberately not silently removed here. Callers that
+     * resolve the path against storage must reject it explicitly.
+     */
+    public static String normalizeStorageRelativePath(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+
+        normalized = normalized.replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.startsWith("./")) {
+            normalized = normalized.substring(2);
+        }
+
+        return normalized.isBlank() ? null : normalized;
+    }
+
+    public static String normalizeImagePaths(String imagesValue) {
+        List<String> imagePaths = splitImageNames(imagesValue);
+        return imagePaths.isEmpty() ? null : String.join(",", imagePaths);
     }
 
     public static String getValue(CSVRecord record, String... headers) {
@@ -78,4 +109,3 @@ public final class CsvImportUtils {
         }
     }
 }
-
