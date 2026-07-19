@@ -203,4 +203,22 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 "where v.product.id = ?1 and v.status <> ?2 order by v.id asc",
                 productId, ProductStatusEn.DISABLED);
     }
+
+    /**
+     * Fetch variants by ID list, eagerly loading their parent Product, filtering
+     * to only those where both the variant and its product are ACTIVE.
+     * Used by the wishlist hydration service to resolve displayable entries.
+     */
+    public List<ProductVariantEntity> findActiveByIdsWithProduct(List<UUID> ids)
+    {
+        if (ids == null || ids.isEmpty()) return Collections.emptyList();
+        return getEntityManager().createQuery(
+                "SELECT v FROM ProductVariantEntity v JOIN FETCH v.product " +
+                "WHERE v.id IN :ids AND v.status = :variantStatus AND v.product.status = :productStatus",
+                ProductVariantEntity.class)
+                .setParameter("ids", ids)
+                .setParameter("variantStatus", ProductStatusEn.ACTIVE)
+                .setParameter("productStatus", ProductStatusEn.ACTIVE)
+                .getResultList();
+    }
 }

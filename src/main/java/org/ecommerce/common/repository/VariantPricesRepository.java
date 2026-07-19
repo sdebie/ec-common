@@ -111,4 +111,31 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         }
         return typedQuery.getResultList();
     }
+
+    /**
+     * Returns the active prices for a set of variant IDs (all requested price types,
+     * within the active date window). Used by the wishlist hydration service to batch-fetch
+     * prices for resolved variants.
+     */
+    public List<VariantPricesEntity> findActiveForVariantIds(
+            List<UUID> variantIds,
+            List<PriceTypeEn> priceTypes,
+            LocalDateTime now)
+    {
+        if (variantIds == null || variantIds.isEmpty() || priceTypes == null || priceTypes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String query = "SELECT vp FROM VariantPricesEntity vp " +
+                "JOIN FETCH vp.variant v " +
+                "WHERE v.id IN :variantIds " +
+                "AND vp.priceType IN :priceTypes " +
+                "AND (vp.priceStartDate IS NULL OR vp.priceStartDate <= :now) " +
+                "AND (vp.priceEndDate IS NULL OR vp.priceEndDate >= :now)";
+        return getEntityManager().createQuery(query, VariantPricesEntity.class)
+                .setParameter("variantIds", variantIds)
+                .setParameter("priceTypes", priceTypes)
+                .setParameter("now", now)
+                .getResultList();
+    }
 }
