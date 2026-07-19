@@ -86,6 +86,9 @@ public class WholesaleApplicationEntity extends PanacheEntityBase {
     @Column(name = "processed_at")
     public OffsetDateTime processedAt;
 
+    @Column(name = "rejection_reason")
+    public String rejectionReason;
+
     @Column(name = "physical_address_line1")
     public String physicalAddressLine1;
 

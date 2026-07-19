@@ -39,6 +39,8 @@ public class WholesaleApplicationDetailsDto {
     private String notes;
     private String applicantEmail;
 
+    private String rejectionReason;
+
     private WholesaleApplicationStatusEn status;
     private OffsetDateTime createdAt;
     private OffsetDateTime processedAt;
@@ -130,6 +132,9 @@ public class WholesaleApplicationDetailsDto {
 
     public String getApplicantEmail() { return applicantEmail; }
     public void setApplicantEmail(String applicantEmail) { this.applicantEmail = applicantEmail; }
+
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
     public WholesaleApplicationStatusEn getStatus() { return status; }
     public void setStatus(WholesaleApplicationStatusEn status) { this.status = status; }
