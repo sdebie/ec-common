@@ -70,10 +70,7 @@ public class PanacheQueryBuilder
         builtQuery = String.join(" AND ", whereClauses);
 
         // 4. Sort
-        Sort panacheSort = buildSort(filterRequest.getSort());
-        if (panacheSort != null) {
-            builtSort = buildSort(filterRequest.getSort());
-        }
+        builtSort = buildSort(filterRequest.getSort());
 
         // 5. Parameters
         builtParams = Collections.unmodifiableMap(paramMap);
