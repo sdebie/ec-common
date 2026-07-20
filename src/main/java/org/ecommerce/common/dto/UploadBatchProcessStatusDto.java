@@ -2,7 +2,7 @@ package org.ecommerce.common.dto;
 
 import java.util.UUID;
 
-public class ProductUploadBatchProcessStatusDto {
+public class UploadBatchProcessStatusDto {
     public UUID batchId;
     public String status;
     public Integer totalRows;

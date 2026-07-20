@@ -16,5 +16,5 @@ public class OrderResponseDto
     public BigDecimal totalAmount;
     public Integer itemCount;
     public CustomerDto customer;
-    public List<OrderItemResponseDto> items = new ArrayList<>();
+    public List<OrderItemDetailDto> items = new ArrayList<>();
 }

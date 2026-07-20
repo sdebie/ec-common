@@ -1,7 +1,6 @@
 package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.persistence.TypedQuery;
 import io.quarkus.panache.common.Page;
 import org.ecommerce.common.dto.PageResponse;

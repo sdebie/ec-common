@@ -1,9 +1,6 @@
 package org.ecommerce.common.dto;
 
 import org.eclipse.microprofile.graphql.Type;
-import org.ecommerce.common.entity.CustomerEntity;
-import org.ecommerce.common.entity.OrderEntity;
-import org.ecommerce.common.entity.OrderItemEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 
 import java.math.BigDecimal;
@@ -16,7 +13,7 @@ import java.util.UUID;
 public class OrderDetailRespDto {
     // OrderEntity fields
     public UUID id;
-    public CustomerDetailDto customerEntity;
+    public CustomerDto customerEntity;
     public BigDecimal totalAmount;
     public UUID sessionId;
     public OrderStatusEn status;
@@ -35,7 +32,6 @@ public class OrderDetailRespDto {
     @Type
     public static class OrderStatusHistoryDetailRespDto {
         public UUID id;
-        public OrderEntity order;
         public OrderStatusEn status;
         public String comment;
         public String changedBy;

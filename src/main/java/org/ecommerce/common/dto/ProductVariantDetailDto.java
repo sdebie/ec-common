@@ -13,5 +13,5 @@ public class ProductVariantDetailDto {
     public String attributesJson;
     public BigDecimal weightKg;
     public ProductDetailDto product;
-    public List<ImageDetailDto> images;
+    public List<ProductImageDto> images;
 }
