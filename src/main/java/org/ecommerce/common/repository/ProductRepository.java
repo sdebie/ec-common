@@ -1,18 +1,15 @@
 package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.persistence.TypedQuery;
 import io.quarkus.panache.common.Page;
+import org.ecommerce.common.dto.PageResponse;
 import org.ecommerce.common.dto.ProductListItemDto;
-import org.ecommerce.common.dto.ProductImageDto;
-import org.ecommerce.common.dto.ProductShoppingListItemDto;
-import org.ecommerce.common.dto.VariantPriceDto;
-import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductEntity;
-import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.enums.PriceTypeEn;
-import org.ecommerce.common.enums.ProductTypeEn;
+import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.Filter;
 import org.ecommerce.common.query.FilterGroup;
@@ -22,7 +19,6 @@ import org.ecommerce.common.query.SortRequest;
 import org.ecommerce.common.query.enums.SortDirection;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -34,6 +30,12 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 {
+	@Override
+	protected Class<ProductEntity> getEntityClass()
+	{
+		return ProductEntity.class;
+	}
+
 	public ProductEntity findBySlugIgnoreCase(String slug)
 	{
 		if (slug == null || slug.isBlank()) {
@@ -61,14 +63,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.firstResult();
 	}
 
-	public List<ProductListItemDto> findAllProductListItems(PageRequest pageRequest, FilterRequest filterRequest)
+	public List<ProductListItemDto> findAllProductListItems(PageRequest pageRequest, FilterRequest filterRequest, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
 		List<PriceTypeEn> basePriceTypes = List.of(
 				PriceTypeEn.RETAIL_PRICE,
 				PriceTypeEn.WHOLESALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.categories " +
@@ -78,6 +80,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -95,6 +98,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		Map<String, Object> params = new LinkedHashMap<>();
 		params.put("priceTypes", basePriceTypes);
 		params.put("now", now);
+		if (!ignoreStatus) {
+			params.put("variantStatus", ProductStatusEn.ACTIVE);
+		}
 		if (queryBuilder.hasParams()) {
 			params.putAll(queryBuilder.params());
 		}
@@ -105,7 +111,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				.toList();
 	}
 
- public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds)
+	 public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds, boolean ignoreStatus)
  {
 	 if (categoryIds == null || categoryIds.isEmpty()) {
 		 return Collections.emptyList();
@@ -116,7 +122,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 PriceTypeEn.RETAIL_PRICE,
 			 PriceTypeEn.WHOLESALE_PRICE);
 	 FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-	 PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+	 PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 	 String query = "select distinct p from ProductEntity p " +
 			 "left join fetch p.categories " +
@@ -132,6 +138,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 "select 1 from ProductVariantEntity v " +
 			 "join VariantPricesEntity vp on vp.variant = v " +
 			 "where v.product = p " +
+	 			 (ignoreStatus ? "" : "and v.status = :variantStatus ") +
 			 "and vp.priceType in :priceTypes " +
 			 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 			 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -147,6 +154,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 	 params.put("categoryIds", categoryIds);
 	 params.put("priceTypes", basePriceTypes);
 	 params.put("now", now);
+	 	 if (!ignoreStatus) {
+	 	 	 params.put("variantStatus", ProductStatusEn.ACTIVE);
+	 	 }
 	 if (queryBuilder.hasParams()) {
 		 params.putAll(queryBuilder.params());
 	 }
@@ -157,16 +167,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			 .toList();
  }
 
-	public long countShoppingProducts(FilterRequest filterRequest)
+	public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
-		List<PriceTypeEn> shoppingPriceTypes = List.of(
-				PriceTypeEn.RETAIL_PRICE,
-				PriceTypeEn.WHOLESALE_PRICE,
-				PriceTypeEn.RETAIL_SALE_PRICE,
-				PriceTypeEn.WHOLESALE_SALE_PRICE);
+		List<PriceTypeEn> shoppingPriceTypes = onSale
+				? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
+				: List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 		String hql = "select count(distinct p) from ProductEntity p " +
 				(hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
@@ -174,6 +182,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -186,6 +195,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
 		q.setParameter("priceTypes", shoppingPriceTypes);
 		q.setParameter("now", now);
+		if (!ignoreStatus) {
+			q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+		}
 		if (queryBuilder.hasParams()) {
 			for (Map.Entry<String, Object> entry : queryBuilder.params().entrySet()) {
 				q.setParameter(entry.getKey(), entry.getValue());
@@ -196,16 +208,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		return result != null ? result : 0L;
 	}
 
-	public List<ProductShoppingListItemDto> findShoppingProductList(PageRequest pageRequest, FilterRequest filterRequest)
+	public List<ProductEntity> findShoppingProductEntities(PageRequest pageRequest, FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
-		List<PriceTypeEn> shoppingPriceTypes = List.of(
-				PriceTypeEn.RETAIL_PRICE,
-				PriceTypeEn.WHOLESALE_PRICE,
-				PriceTypeEn.RETAIL_SALE_PRICE,
-				PriceTypeEn.WHOLESALE_SALE_PRICE);
+		List<PriceTypeEn> shoppingPriceTypes = onSale
+				? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
+				: List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
 		FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest);
+		PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
 
 		String query = "select distinct p from ProductEntity p " +
 				"left join fetch p.categories " +
@@ -215,6 +225,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -229,17 +240,18 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 		Map<String, Object> params = new LinkedHashMap<>();
 		params.put("priceTypes", shoppingPriceTypes);
 		params.put("now", now);
+		if (!ignoreStatus) {
+			params.put("variantStatus", ProductStatusEn.ACTIVE);
+		}
 		if (queryBuilder.hasParams()) {
 			params.putAll(queryBuilder.params());
 		}
 
 		return find(query, params)
-				.page(queryBuilder.page(pageRequest)).list().stream()
-				.map(product -> toShoppingListItemDto(product, now))
-				.toList();
+				.page(queryBuilder.page(pageRequest)).list();
 	}
 
-	public List<ProductShoppingListItemDto> findOnSaleShoppingProductList(PageRequest pageRequest)
+	public List<ProductEntity> findOnSaleProductEntities(PageRequest pageRequest, boolean ignoreStatus)
 	{
 		LocalDateTime now = LocalDateTime.now();
 		List<PriceTypeEn> salePriceTypes = List.of(
@@ -253,20 +265,25 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				"select 1 from ProductVariantEntity v " +
 				"join VariantPricesEntity vp on vp.variant = v " +
 				"where v.product = p " +
+				(ignoreStatus ? "" : "and v.status = :variantStatus ") +
 				"and vp.priceType in :priceTypes " +
 				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
 				"and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
 				") " +
 				"order by p.name asc";
 
-		return find(query,
-					Map.of("priceTypes", salePriceTypes, "now", now))
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("priceTypes", salePriceTypes);
+		params.put("now", now);
+		if (!ignoreStatus) {
+			params.put("variantStatus", ProductStatusEn.ACTIVE);
+		}
+
+		return find(query, params)
 				.page(Page.of(
 						pageRequest != null ? pageRequest.getPageIndex() : 0,
 						pageRequest != null ? pageRequest.getPageSize() : 10))
-				.list().stream()
-				.map(product -> toShoppingListItemDto(product, now))
-				.toList();
+				.list();
 	}
 
 
@@ -435,7 +452,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 					.toList();
 		}
 
-		return new ProductListItemDto(
+		ProductListItemDto dto = new ProductListItemDto(
 				product.id == null ? null : product.id.toString(),
 				product.name,
 				product.description,
@@ -443,122 +460,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 				Collections.emptyList(),
 				categoryNames,
 				product.brand != null ? product.brand.name : null);
-	}
-
-	private ProductShoppingListItemDto toShoppingListItemDto(ProductEntity product, LocalDateTime now)
-	{
-		ProductShoppingListItemDto dto = new ProductShoppingListItemDto();
-		dto.id = product.id == null ? null : product.id.toString();
-		dto.name = product.name;
-		dto.shortDescription = product.shorDescription;
-		dto.productType = product.productType == null ? null : product.productType.name();
-		dto.variantCount = product.id == null ? 0 : countVariants(product.id);
-		dto.variantId = product.id == null || product.productType != ProductTypeEn.SIMPLE
-				? null
-				: findFirstVariantId(product.id);
-		dto.images = product.id == null ? List.of() : findProductImages(product.id);
-		dto.retailPrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_PRICE, now);
-		dto.wholesalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_PRICE, now);
-		dto.retailSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.RETAIL_SALE_PRICE, now);
-		dto.wholesaleSalePrice = product.id == null ? null : findLowestActivePrice(product.id, PriceTypeEn.WHOLESALE_SALE_PRICE, now);
+		dto.status = product.status == null ? null : product.status.name();
 		return dto;
-	}
-
-	private String findFirstVariantId(UUID productId)
-	{
-		List<UUID> variantIds = getEntityManager()
-				.createQuery(
-						"select v.id from ProductVariantEntity v where v.product.id = :productId order by v.id asc",
-						UUID.class)
-				.setParameter("productId", productId)
-				.setMaxResults(1)
-				.getResultList();
-
-		return variantIds.isEmpty() ? null : variantIds.get(0).toString();
-	}
-
-	private Integer countVariants(UUID productId)
-	{
-		Long count = getEntityManager()
-				.createQuery("select count(v.id) from ProductVariantEntity v where v.product.id = :productId", Long.class)
-				.setParameter("productId", productId)
-				.getSingleResult();
-		return count == null ? 0 : count.intValue();
-	}
-
-	private List<ProductImageDto> findProductImages(UUID productId)
-	{
-		return getEntityManager().createQuery(
-				"select pi from ProductImageEntity pi " +
-				"where pi.productVariant.product.id = :productId " +
-				"order by case when pi.isFeatured = true then 0 else 1 end asc, pi.sortOrder asc, pi.id asc",
-				ProductImageEntity.class)
-				.setParameter("productId", productId)
-				.getResultList()
-				.stream()
-				.map(this::toProductImageDto)
-				.toList();
-	}
-
-	private ProductImageDto toProductImageDto(ProductImageEntity image)
-	{
-		return new ProductImageDto(
-				image.id == null ? null : image.id.toString(),
-				image.imageUrl,
-				image.sortOrder,
-				Boolean.TRUE.equals(image.isFeatured));
-	}
-
-	private VariantPriceDto findLowestActivePrice(UUID productId, PriceTypeEn priceType, LocalDateTime now)
-	{
-		LocalDateTime veryOldDate = LocalDateTime.of(1970, 1, 1, 0, 0);
-
-		TypedQuery<VariantPricesEntity> query = getEntityManager().createQuery(
-				"select vp from VariantPricesEntity vp " +
-				"join vp.variant v " +
-				"where v.product.id = :productId " +
-				"and vp.priceType = :priceType " +
-				"and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-				"and (vp.priceEndDate is null or vp.priceEndDate >= :now) " +
-				"order by vp.price asc, coalesce(vp.priceStartDate, :veryOldDate) asc, vp.createdAt asc",
-				VariantPricesEntity.class);
-
-		List<VariantPricesEntity> prices = query
-				.setParameter("productId", productId)
-				.setParameter("priceType", priceType)
-				.setParameter("now", now)
-				.setParameter("veryOldDate", veryOldDate)
-				.setMaxResults(1)
-				.getResultList();
-
-		if (prices.isEmpty()) {
-			return null;
-		}
-
-		VariantPricesEntity price = prices.get(0);
-		VariantPriceDto dto = new VariantPriceDto();
-		dto.id = price.id == null ? null : price.id.toString();
-		dto.priceType = price.priceType == null ? null : price.priceType.name();
-		dto.price = price.price;
-		dto.priceStartDate = price.priceStartDate;
-		dto.priceEndDate = price.priceEndDate;
-		dto.isActive = Boolean.TRUE;
-		dto.saleDaysRemaining = calculateSaleDaysRemaining(price.priceType, price.priceEndDate, now);
-		return dto;
-	}
-
-	private Long calculateSaleDaysRemaining(PriceTypeEn priceType, LocalDateTime endDate, LocalDateTime now)
-	{
-		if (priceType == null || endDate == null) {
-			return null;
-		}
-
-		if (priceType != PriceTypeEn.RETAIL_SALE_PRICE && priceType != PriceTypeEn.WHOLESALE_SALE_PRICE) {
-			return null;
-		}
-
-		long daysRemaining = ChronoUnit.DAYS.between(now.toLocalDate(), endDate.toLocalDate());
-		return Math.max(daysRemaining, 0L);
 	}
 
 	// ─── Best Sellers ──────────────────────────────────────────────────────────
@@ -568,10 +471,9 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 	 * DELIVERED orders. If fewer than 10 exist, the remainder is filled with
 	 * random products so the response always contains up to 10 entries.
 	 */
-	public List<ProductShoppingListItemDto> findTopBestSellers()
+	public List<ProductEntity> findTopBestSellerEntities()
 	{
 		final int TARGET = 10;
-		LocalDateTime now = LocalDateTime.now();
 
 		// Step 1 – collect best-seller product IDs ranked by units sold
 		List<Object[]> rows = getEntityManager()
@@ -603,9 +505,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 			result.addAll(random);
 		}
 
-		return result.stream()
-				.map(p -> toShoppingListItemDto(p, now))
-				.collect(Collectors.toList());
+		return result;
 	}
 
 	/**
@@ -660,6 +560,73 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 					.setParameter("excludeIds", excludeIds);
 		}
 		return q.setMaxResults(limit).getResultList();
+	}
+
+	/**
+	 * Paged admin product list (entities), with optional status/category/brand/search
+	 * filters. Returns the page of entities plus pagination metadata; the caller maps
+	 * each entity to its DTO.
+	 */
+	public PageResponse<ProductEntity> findAdminProductPage(int pageIndex, int pageSize, String status, String categoryId, String brandId, String search)
+	{
+		int effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
+		int effectivePageIndex = Math.max(pageIndex, 0);
+
+		StringBuilder whereClause = new StringBuilder("WHERE 1=1");
+		Map<String, Object> params = new LinkedHashMap<>();
+
+		if (status != null && !status.isBlank()) {
+			whereClause.append(" AND p.status = :status");
+			params.put("status", ProductStatusEn.valueOf(status));
+		}
+		if (categoryId != null && !categoryId.isBlank()) {
+			whereClause.append(" AND EXISTS (SELECT 1 FROM p.categories c WHERE c.id = :categoryId)");
+			params.put("categoryId", UUID.fromString(categoryId));
+		}
+		if (brandId != null && !brandId.isBlank()) {
+			whereClause.append(" AND p.brand.id = :brandId");
+			params.put("brandId", UUID.fromString(brandId));
+		}
+		if (search != null && !search.isBlank()) {
+			String searchPattern = "%" + search.trim().toLowerCase() + "%";
+			whereClause.append(" AND (LOWER(p.name) LIKE :search")
+					.append(" OR EXISTS (SELECT 1 FROM ProductVariantEntity sv WHERE sv.product = p AND LOWER(sv.sku) LIKE :search)")
+					.append(")");
+			params.put("search", searchPattern);
+		}
+
+		String countHql = "SELECT COUNT(p) FROM ProductEntity p " + whereClause;
+		TypedQuery<Long> countQuery = getEntityManager().createQuery(countHql, Long.class);
+		for (Map.Entry<String, Object> entry : params.entrySet()) {
+			countQuery.setParameter(entry.getKey(), entry.getValue());
+		}
+		long totalElements = countQuery.getSingleResult();
+		int totalPages = effectivePageSize > 0
+				? (int) Math.ceil((double) totalElements / effectivePageSize)
+				: 0;
+		// A deletion or filter change can make a previously valid client page fall
+		// outside the result set between requests. Return the final available page
+		// instead of an avoidable empty page; callers can render response metadata
+		// without an effect-driven pagination correction.
+		if (totalPages > 0) {
+			effectivePageIndex = Math.min(effectivePageIndex, totalPages - 1);
+		}
+
+		String fetchHql = "SELECT DISTINCT p FROM ProductEntity p " +
+				"LEFT JOIN FETCH p.categories " +
+				"LEFT JOIN FETCH p.brand " +
+				whereClause +
+				" ORDER BY p.name ASC";
+		TypedQuery<ProductEntity> fetchQuery = getEntityManager().createQuery(fetchHql, ProductEntity.class);
+		for (Map.Entry<String, Object> entry : params.entrySet()) {
+			fetchQuery.setParameter(entry.getKey(), entry.getValue());
+		}
+		fetchQuery.setFirstResult(effectivePageIndex * effectivePageSize);
+		fetchQuery.setMaxResults(effectivePageSize);
+
+		List<ProductEntity> products = fetchQuery.getResultList();
+
+		return new PageResponse<>(products, totalElements, totalPages, effectivePageIndex, effectivePageSize);
 	}
 
 }

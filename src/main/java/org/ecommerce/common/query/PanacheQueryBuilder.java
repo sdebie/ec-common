@@ -2,15 +2,18 @@ package org.ecommerce.common.query;
 
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.enums.LogicalOperator;
 import org.ecommerce.common.query.enums.SortDirection;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.UUID;
 
 public class PanacheQueryBuilder
 {
     private final FilterRequest filterRequest;
+    private final Class<?> entityClass;
     private final List<String> whereClauses = new ArrayList<>();
     private final Map<String, Object> paramMap = new LinkedHashMap<>();
 
@@ -22,12 +25,23 @@ public class PanacheQueryBuilder
 
     public PanacheQueryBuilder(FilterRequest filterRequest)
     {
+        this(filterRequest, null);
+    }
+
+    public PanacheQueryBuilder(FilterRequest filterRequest, Class<?> entityClass)
+    {
         this.filterRequest = filterRequest != null ? filterRequest : new FilterRequest();
+        this.entityClass = entityClass;
     }
 
     public static PanacheQueryBuilder from(FilterRequest filterRequest)
     {
-        return new PanacheQueryBuilder(filterRequest).build();
+        return new PanacheQueryBuilder(filterRequest, null).build();
+    }
+
+    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass)
+    {
+        return new PanacheQueryBuilder(filterRequest, entityClass).build();
     }
 
     private PanacheQueryBuilder build()
@@ -56,10 +70,7 @@ public class PanacheQueryBuilder
         builtQuery = String.join(" AND ", whereClauses);
 
         // 4. Sort
-        Sort panacheSort = buildSort(filterRequest.getSort());
-        if (panacheSort != null) {
-            builtSort = buildSort(filterRequest.getSort());
-        }
+        builtSort = buildSort(filterRequest.getSort());
 
         // 5. Parameters
         builtParams = Collections.unmodifiableMap(paramMap);
@@ -130,13 +141,18 @@ public class PanacheQueryBuilder
         String field = sanitize(filter.getKey());
         String p = "p" + seq++;
 
+        // Resolve the exact enum class for this field via reflection on the entity class.
+        // Falls back to the legacy ProductStatusEn heuristic when no entity class is provided.
+        @SuppressWarnings("rawtypes")
+        Class<? extends Enum> enumType = resolveEnumType(field);
+
         return switch (filter.getOperator()) {
             case EQUALS -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, enumType != null ? coerceToEnum(filter.getValue(), enumType) : coerce(filter.getValue()));
                 yield field + " = :" + p;
             }
             case NOT_EQUALS -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, enumType != null ? coerceToEnum(filter.getValue(), enumType) : coerce(filter.getValue()));
                 yield field + " != :" + p;
             }
             case GREATER_THAN -> {
@@ -156,11 +172,11 @@ public class PanacheQueryBuilder
                 yield field + " <= :" + p;
             }
             case IN -> {
-                bind(p, coerceList(filter.getValues()));
+                bind(p, enumType != null ? coerceToEnumList(filter.getValues(), enumType) : coerceList(filter.getValues()));
                 yield field + " IN (:" + p + ")";
             }
             case NOT_IN -> {
-                bind(p, coerceList(filter.getValues()));
+                bind(p, enumType != null ? coerceToEnumList(filter.getValues(), enumType) : coerceList(filter.getValues()));
                 yield field + " NOT IN (:" + p + ")";
             }
             case LIKE -> {
@@ -188,6 +204,77 @@ public class PanacheQueryBuilder
     private void bind(String key, Object value)
     {
         paramMap.put(key, value);
+    }
+
+    /**
+     * Resolves the enum class for a given JPQL field name by inspecting the entity class
+     * via reflection. Dot-notation fields (e.g. "address.city") walk the chain.
+     * Returns null if the field is not an enum or the entity class is unknown.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Class<? extends Enum> resolveEnumType(String fieldName)
+    {
+        if (entityClass == null) return null;
+        try {
+            String[] parts = fieldName.split("\\.");
+            // If the first segment is not a Java field on the entity it is a JPQL alias
+            // (e.g. "p" in "p.status"). Skip it so the remaining path resolves correctly.
+            int start = (parts.length > 1 && findField(entityClass, parts[0]) == null) ? 1 : 0;
+            Class<?> current = entityClass;
+            for (int i = start; i < parts.length; i++) {
+                Field f = findField(current, parts[i]);
+                if (f == null) return null;
+                current = f.getType();
+            }
+            return current.isEnum() ? (Class<? extends Enum>) current : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static Field findField(Class<?> clazz, String name)
+    {
+        Class<?> c = clazz;
+        while (c != null && c != Object.class) {
+            try { return c.getDeclaredField(name); } catch (NoSuchFieldException ignored) {}
+            c = c.getSuperclass();
+        }
+        return null;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Object coerceToEnum(String value, Class<? extends Enum> enumClass)
+    {
+        if (value == null) return null;
+        try {
+            return Enum.valueOf(enumClass, value);
+        } catch (IllegalArgumentException ignored) {
+            return value;
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private List<Object> coerceToEnumList(List<String> values, Class<? extends Enum> enumClass)
+    {
+        if (values == null) return Collections.emptyList();
+        List<Object> out = new ArrayList<>();
+        for (String v : values) out.add(coerceToEnum(v, enumClass));
+        return out;
+    }
+
+    /**
+     * Legacy fallback used when no entity class is provided.
+     * Only handles ProductStatusEn — kept for backward compatibility with callers
+     * that have not yet passed an entity class.
+     */
+    protected Object coerceEnum(String value)
+    {
+        if (value == null) return null;
+        try {
+            return ProductStatusEn.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            return value;
+        }
     }
 
     /**

@@ -10,13 +10,15 @@ import java.util.List;
 
 public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, ID>
 {
+    protected abstract Class<T> getEntityClass();
+
     public List<T> findAll(PageRequest pageRequest, FilterRequest filterRequest)
     {
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest, getEntityClass());
         PanacheQuery<T> query;
 
         if (queryBuilder.hasQuery() && queryBuilder.hasParams()) {
-            // Filtered query with bound parameters (e.g. ILIKE, EQUALS, …)
+            // Filtered query with bound parameters (e.g., ILIKE, EQUALS, …)
             query = find(queryBuilder.query(), queryBuilder.sort(), queryBuilder.params());
         } else if (queryBuilder.hasQuery()) {
             // Param-free clauses such as IS NULL / IS NOT NULL
@@ -32,7 +34,7 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
 
     public long count(FilterRequest filterRequest)
     {
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest);
+        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest, getEntityClass());
 
         if (queryBuilder.hasQuery() && queryBuilder.hasParams()) {
             return count(queryBuilder.query(), queryBuilder.params());

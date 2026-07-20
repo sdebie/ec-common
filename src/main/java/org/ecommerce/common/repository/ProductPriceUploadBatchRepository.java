@@ -8,5 +8,10 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductPriceUploadBatchRepository extends BaseRepository<ProductPriceUploadBatchEntity, UUID>
 {
+    @Override
+    protected Class<ProductPriceUploadBatchEntity> getEntityClass()
+    {
+        return ProductPriceUploadBatchEntity.class;
+    }
 }
 

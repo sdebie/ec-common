@@ -9,6 +9,12 @@ import java.util.UUID;
 public class StaffRepository extends BaseRepository<StaffUserEntity, UUID>
 {
 
+    @Override
+    protected Class<StaffUserEntity> getEntityClass()
+    {
+        return StaffUserEntity.class;
+    }
+
     /** Returns a staff user with the given email that belongs to a different record than {@code excludeId}. */
     public StaffUserEntity findByEmailExcludingId(String email, UUID excludeId)
     {

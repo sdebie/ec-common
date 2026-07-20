@@ -24,8 +24,8 @@ public class OrderEntity extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", referencedColumnName = "id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "customer_id", referencedColumnName = "id", nullable = true)
     public CustomerEntity customerEntity;
 
     @Column(name = "total_amount", nullable = false)
@@ -38,19 +38,33 @@ public class OrderEntity extends PanacheEntityBase {
     @Column(length = 50)
     public OrderStatusEn status = OrderStatusEn.PENDING;
 
-    // Delivery Details (not yet persisted in DB schema)
-    @Transient
-    public String shippingPhone;
-    @Transient
-    public String shippingAddressLine1;
-    @Transient
-    public String shippingAddressLine2;
-    @Transient
-    public String shippingCity;
-    @Transient
-    public String shippingProvince;
-    @Transient
-    public String shippingPostalCode;
+    // Contact details
+    @Column(name = "contact_email")
+    public String contactEmail;
+
+    @Column(name = "contact_first_name")
+    public String contactFirstName;
+
+    @Column(name = "contact_last_name")
+    public String contactLastName;
+
+    // Shipping method
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shipping_method_id")
+    public ShippingMethodEntity shippingMethod;
+
+    // Shipping address
+    @Column(name = "street_address")
+    public String streetAddress;
+
+    @Column(name = "city")
+    public String city;
+
+    @Column(name = "province")
+    public String province;
+
+    @Column(name = "postal_code")
+    public String postalCode;
 
     @OneToMany(mappedBy = "orderEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     public List<OrderItemEntity> items = new ArrayList<>();

@@ -16,11 +16,17 @@ public class ProductShoppingListItemDto {
     @Description("Product name")
     public String name;
 
+    @Description("URL slug for routing to the product detail page")
+    public String slug;
+
     @Description("Product short description")
     public String shortDescription;
 
     @Description("Product type (e.g. SIMPLE or VARIABLE)")
     public String productType;
+
+    @Description("Product status")
+    public String status;
 
     @Description("Total number of variants for this product")
     public Integer variantCount;

@@ -11,6 +11,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductUploadStagedRepository extends BaseRepository<ProductUploadStagedEntity, UUID>
 {
+    @Override
+    protected Class<ProductUploadStagedEntity> getEntityClass()
+    {
+        return ProductUploadStagedEntity.class;
+    }
+
     public List<ProductUploadStagedEntity> findByBatchId(UUID batchId)
     {
         return list("batch.id = ?1", batchId);

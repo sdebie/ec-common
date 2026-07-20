@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.ecommerce.common.enums.ProductStatusEn;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +36,10 @@ public class ProductVariantEntity extends PanacheEntityBase {
 
     @Column(name = "weight_kg", precision = 5, scale = 2)
     public BigDecimal weightKg;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    public ProductStatusEn status; // PENDING, ACTIVE, DISABLED
 
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
     public List<VariantPricesEntity> prices;

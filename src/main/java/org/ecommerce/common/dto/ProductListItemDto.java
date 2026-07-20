@@ -32,6 +32,9 @@ public class ProductListItemDto {
     @Description("All variant IDs for this product")
     public List<String> variantIds;
 
+    @Description("Product status")
+    public String status;
+
     public ProductListItemDto() {}
 
     public ProductListItemDto(String id, String name, String description,

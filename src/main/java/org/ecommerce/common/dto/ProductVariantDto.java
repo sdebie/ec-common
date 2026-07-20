@@ -18,6 +18,9 @@ public class ProductVariantDto {
     public String attributesJson;
     public BigDecimal weightKg;
 
+    @Description("Variant status")
+    public String status;
+
     @Description("Parent product info")
     public ProductDto product;
 

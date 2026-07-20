@@ -29,6 +29,9 @@ public class ProductDto {
     @Description("Product type")
     public String productType;
 
+    @Description("Product status")
+    public String status;
+
     @Description("Product created date/time")
     public String createdAt;
 

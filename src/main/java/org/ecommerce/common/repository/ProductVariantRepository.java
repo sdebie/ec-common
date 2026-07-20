@@ -5,6 +5,7 @@ import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.PriceTypeEn;
+import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.PageRequest;
 
 import java.math.BigDecimal;
@@ -16,6 +17,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProductVariantRepository extends BaseRepository<ProductVariantEntity, UUID>
 {
+    @Override
+    protected Class<ProductVariantEntity> getEntityClass()
+    {
+        return ProductVariantEntity.class;
+    }
+
     public ProductVariantEntity findBySku(String sku)
     {
         if (sku == null || sku.isBlank()) {
@@ -64,6 +71,29 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     }
 
     /**
+     * Fetches the variants for a page of products in one query.  List assemblers
+     * use this instead of issuing a variant/count query for every product.
+     */
+    public List<ProductVariantEntity> findForProductIds(List<UUID> productIds, boolean ignoreStatus)
+    {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String query = "select v from ProductVariantEntity v " +
+                "join fetch v.product " +
+                "where v.product.id in :productIds " +
+                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
+                "order by v.product.id asc, v.id asc";
+        var typedQuery = getEntityManager().createQuery(query, ProductVariantEntity.class)
+                .setParameter("productIds", productIds);
+        if (!ignoreStatus) {
+            typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        return typedQuery.getResultList();
+    }
+
+    /**
      * Fetch all variants that carry an active RETAIL_SALE_PRICE or WHOLESALE_SALE_PRICE.
      * Eagerly loads the parent product and its categories to avoid N+1 queries.
      */
@@ -104,6 +134,91 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
 
         //TODO::SDB Get the prices in window
     }
+
+    /** Number of variants for a product; ACTIVE-only unless {@code ignoreStatus}. */
+    public int countForProduct(UUID productId, boolean ignoreStatus)
+    {
+        String q = "SELECT COUNT(v.id) FROM ProductVariantEntity v WHERE v.product.id = :productId " +
+                (ignoreStatus ? "" : "AND v.status = :variantStatus");
+        var query = getEntityManager().createQuery(q, Long.class).setParameter("productId", productId);
+        if (!ignoreStatus) {
+            query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        Long count = query.getSingleResult();
+        return count == null ? 0 : count.intValue();
+    }
+
+    /** First variant id (by id ASC) for a product; ACTIVE-only unless {@code ignoreStatus}. */
+    public String findFirstVariantId(UUID productId, boolean ignoreStatus)
+    {
+        String q = "SELECT v.id FROM ProductVariantEntity v WHERE v.product.id = :productId " +
+                (ignoreStatus ? "" : "AND v.status = :variantStatus ") +
+                "ORDER BY v.id ASC";
+        var query = getEntityManager().createQuery(q, UUID.class)
+                .setParameter("productId", productId)
+                .setMaxResults(1);
+        if (!ignoreStatus) {
+            query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+        List<UUID> ids = query.getResultList();
+        return ids.isEmpty() ? null : ids.get(0).toString();
+    }
+
+    /** Aggregated stock across all variants of a product. */
+    public int sumStock(UUID productId)
+    {
+        Long total = getEntityManager().createQuery(
+                        "SELECT COALESCE(SUM(v.stockQuantity), 0) FROM ProductVariantEntity v WHERE v.product.id = :productId",
+                        Long.class)
+                .setParameter("productId", productId)
+                .getSingleResult();
+        return total == null ? 0 : total.intValue();
+    }
+
+    /**
+     * Returns true if the given variant is referenced by any order_items row.
+     * Used by the Deletion Policy to prevent hard-deleting order-referenced variants.
+     */
+    public boolean isReferencedByOrders(UUID variantId)
+    {
+        if (variantId == null) return false;
+        Long count = getEntityManager().createQuery(
+                        "SELECT COUNT(oi.id) FROM OrderItemEntity oi WHERE oi.variant.id = :variantId",
+                        Long.class)
+                .setParameter("variantId", variantId)
+                .getSingleResult();
+        return count != null && count > 0;
+    }
+
+    /**
+     * Fetch all ACTIVE variants for a given product (excludes DISABLED).
+     * Used by admin-edit and storefront-detail reads so that soft-deleted variants
+     * are absent after save.
+     */
+    public List<ProductVariantEntity> findActiveVariantsForProductId(UUID productId)
+    {
+        if (productId == null) return Collections.emptyList();
+        return list(
+                "select v from ProductVariantEntity v left join fetch v.product " +
+                "where v.product.id = ?1 and v.status <> ?2 order by v.id asc",
+                productId, ProductStatusEn.DISABLED);
+    }
+
+    /**
+     * Fetch variants by ID list, eagerly loading their parent Product, filtering
+     * to only those where both the variant and its product are ACTIVE.
+     * Used by the wishlist hydration service to resolve displayable entries.
+     */
+    public List<ProductVariantEntity> findActiveByIdsWithProduct(List<UUID> ids)
+    {
+        if (ids == null || ids.isEmpty()) return Collections.emptyList();
+        return getEntityManager().createQuery(
+                "SELECT v FROM ProductVariantEntity v JOIN FETCH v.product " +
+                "WHERE v.id IN :ids AND v.status = :variantStatus AND v.product.status = :productStatus",
+                ProductVariantEntity.class)
+                .setParameter("ids", ids)
+                .setParameter("variantStatus", ProductStatusEn.ACTIVE)
+                .setParameter("productStatus", ProductStatusEn.ACTIVE)
+                .getResultList();
+    }
 }
-
-
