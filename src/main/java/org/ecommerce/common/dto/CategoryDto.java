@@ -3,7 +3,6 @@ package org.ecommerce.common.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.Accessors;
-import org.ecommerce.common.entity.CategoryEntity;
 
 import java.util.UUID;
 
@@ -20,6 +19,6 @@ public class CategoryDto
     public String name;
     public String slug;
     public String description;
-    public CategoryEntity parent;
+    public CategoryDto parent;
     public String imageUrl;
 }
