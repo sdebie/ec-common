@@ -1,12 +1,18 @@
 package org.ecommerce.common.dto;
 
-public class OrderContactRequestDto {
-    public String email;
-    public String firstName;
-    public String lastName;
-    public String shippingMethodId;  // optional
-    public String streetAddress;     // optional
-    public String city;              // optional
-    public String province;          // optional
-    public String postalCode;        // optional
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class OrderContactRequestDto
+{
+    private String email;
+    private String firstName;
+    private String lastName;
+    private String shippingMethodId;  // optional
+    private String streetAddress;     // optional
+    private String city;              // optional
+    private String province;          // optional
+    private String postalCode;        // optional
 }

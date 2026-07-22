@@ -450,7 +450,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 Collections.emptyList(),
                 categoryNames,
                 product.getBrand() != null ? product.getBrand().getName() : null);
-        dto.status = product.getStatus() == null ? null : product.getStatus().name();
+        dto.setStatus(product.getStatus() == null ? null : product.getStatus().name());
         return dto;
     }
 

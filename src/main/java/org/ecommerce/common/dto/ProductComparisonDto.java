@@ -1,53 +1,43 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.util.UUID;
 
-@SuppressWarnings("unused")
-public class ProductComparisonDto {
-    public UUID stagedId;
-    public String sku;
+@Getter
+@Setter
+public class ProductComparisonDto
+{
+    private UUID stagedId;
+    private String sku;
 
     // CSV-layout fields for import review
-    public String categorySlug;
-    public String brandSlug;
-    public Integer currentStock;
-    public Integer proposedStock;
-    public String currentImages;
-    public String proposedImages;
-    public String currentAttributes;
-    public String proposedAttributes;
-    public String validationErrors;
-    public ProductImportValidationStatusEn validationStatus;
-    public String imageErrors;
+    private String categorySlug;
+    private String brandSlug;
+    private Integer currentStock;
+    private Integer proposedStock;
+    private String currentImages;
+    private String proposedImages;
+    private String currentAttributes;
+    private String proposedAttributes;
+    private String validationErrors;
+    private ProductImportValidationStatusEn validationStatus;
+    private String imageErrors;
 
     // Name comparison
-    public String currentName;
-    public String proposedName;
+    private String currentName;
+    private String proposedName;
 
-    public String currentDescription;
-    public String proposedDescription;
-    public String currentShortDescription;
-    public String proposedShortDescription;
+    private String currentDescription;
+    private String proposedDescription;
+    private String currentShortDescription;
+    private String proposedShortDescription;
 
-    public boolean isValidCategory;
-    public boolean isValidBrand;
-    public boolean isNewProduct;
-    public boolean isNewVariant;
+    private boolean isValidCategory;
+    private boolean isValidBrand;
+    private boolean isNewProduct;
+    private boolean isNewVariant;
     public boolean hasChanges;
-
-    // Keep GraphQL schema backward-compatible with clients querying `isNewProduct`.
-    public boolean getIsNewProduct() {
-        return isNewProduct;
-    }
-    public boolean getIsNewVariant() {
-        return isNewVariant;
-    }
-    public boolean getIsValidCategory() {
-        return isValidCategory;
-    }
-    public boolean getIsValidBrand() {
-        return isValidBrand;
-    }
 }

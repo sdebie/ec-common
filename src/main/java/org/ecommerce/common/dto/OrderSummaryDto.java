@@ -1,12 +1,17 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.eclipse.microprofile.graphql.Type;
 
+@Getter
+@Setter
 @Type
-public class OrderSummaryDto {
-    public String id;
-    public String orderDate;        // ISO-8601 string
-    public String status;           // OrderStatusEn.name()
-    public int itemCount;           // sum of quantities across all line items
-    public double totalAmount;      // order total as double
+public class OrderSummaryDto
+{
+    private String id;
+    private String orderDate;        // ISO-8601 string
+    private String status;           // OrderStatusEn.name()
+    private int itemCount;           // sum of quantities across all line items
+    private double totalAmount;      // order total as double
 }

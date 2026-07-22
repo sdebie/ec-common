@@ -2,6 +2,7 @@ package org.ecommerce.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
  * each instantiation (e.g. PageResponseCategoryDto, PageResponseBrandDto).
  */
 @Getter
+@Setter
 @AllArgsConstructor
 public class PageResponse<T>
 {

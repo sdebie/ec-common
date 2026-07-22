@@ -1,10 +1,16 @@
 package org.ecommerce.common.dto;
 
-public class CustomerLoginResponseDto {
-    public String token;
-    public String email;
-    public String firstName;
-    public String lastName;
-    public String shopperType;  // "GUEST" | "RETAILER" | "WHOLESALER"
-    public String status;       // "PENDING" | "ACTIVE" | "DISABLED"
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class CustomerLoginResponseDto
+{
+    private String token;
+    private String email;
+    private String firstName;
+    private String lastName;
+    private String shopperType;  // "GUEST" | "RETAILER" | "WHOLESALER"
+    private String status;       // "PENDING" | "ACTIVE" | "DISABLED"
 }

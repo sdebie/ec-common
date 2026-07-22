@@ -1,14 +1,20 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.UUID;
 
-public class UploadBatchProcessStatusDto {
-    public UUID batchId;
-    public String status;
-    public Integer totalRows;
-    public Long stagedRows;
-    public Long processedRows;
-    public Long skippedRows;
-    public Integer validationErrorCount;
-    public boolean completed;
+@Getter
+@Setter
+public class UploadBatchProcessStatusDto
+{
+    private UUID batchId;
+    private String status;
+    private Integer totalRows;
+    private Long stagedRows;
+    private Long processedRows;
+    private Long skippedRows;
+    private Integer validationErrorCount;
+    private boolean completed;
 }

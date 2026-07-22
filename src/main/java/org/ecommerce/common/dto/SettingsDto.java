@@ -1,9 +1,15 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
-public class SettingsDto {
-    public List<StoreSettingsDto> storeSettings;
-    public List<ShippingMethodDto> shippingMethods;
-    public List<CountrySettingsDto> countrySettings;
+@Getter
+@Setter
+public class SettingsDto
+{
+    private List<StoreSettingsDto> storeSettings;
+    private List<ShippingMethodDto> shippingMethods;
+    private List<CountrySettingsDto> countrySettings;
 }

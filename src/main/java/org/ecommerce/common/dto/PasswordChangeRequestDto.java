@@ -1,6 +1,12 @@
 package org.ecommerce.common.dto;
 
-public class PasswordChangeRequestDto {
-    public String currentPassword;
-    public String newPassword;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class PasswordChangeRequestDto
+{
+    private String currentPassword;
+    private String newPassword;
 }

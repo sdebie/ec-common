@@ -8,8 +8,6 @@ import java.util.UUID;
 /**
  * A single line item in a quote request submission.
  */
-public record QuoteRequestLineDto(
-        @NotNull UUID variantId,
-        @Min(1) int quantity
-) {
+public record QuoteRequestLineDto(@NotNull UUID variantId, @Min(1) int quantity)
+{
 }

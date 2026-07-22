@@ -8,17 +8,12 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@Accessors(chain = true)
 public class CategoryDto
 {
-    public UUID id;
-    public String name;
-    public String slug;
-    public String description;
-    public CategoryDto parent;
-    public String imageUrl;
+    private UUID id;
+    private String name;
+    private String slug;
+    private String description;
+    private CategoryDto parent;
+    private String imageUrl;
 }
