@@ -23,17 +23,17 @@ public class ProductImageDto
     private Integer sortOrder;
 
     @Description("Whether this image is featured")
-    private boolean isFeatured;
+    private boolean featured;
 
     public ProductImageDto()
     {
     }
 
-    public ProductImageDto(String id, String imageUrl, Integer sortOrder, boolean isFeatured)
+    public ProductImageDto(String id, String imageUrl, Integer sortOrder, boolean featured)
     {
         this.id = id;
         this.imageUrl = imageUrl;
         this.sortOrder = sortOrder;
-        this.isFeatured = isFeatured;
+        this.featured = featured;
     }
 }
