@@ -5,31 +5,36 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "country_settings")
-public class CountrySettingsEntity extends PanacheEntityBase {
+public class CountrySettingsEntity extends PanacheEntityBase
+{
 
     @Id
     @Column(name = "country_code", length = 2)
-    public String countryCode;
+    private String countryCode;
 
     @Column(name = "country_name", nullable = false)
-    public String countryName;
+    private String countryName;
 
     @Column(name = "currency_code", nullable = false, length = 3)
-    public String currencyCode;
+    private String currencyCode;
 
     @Column(name = "locale", nullable = false)
-    public String locale;
+    private String locale;
 
     @Column(name = "decimal_places", nullable = false)
-    public short decimalPlaces = 2;
+    private short decimalPlaces = 2;
 
     @Column(name = "is_default", nullable = false)
-    public boolean isDefault;
+    private boolean isDefault;
 
     @Column(name = "is_active", nullable = false)
-    public boolean isActive = true;
+    private boolean isActive = true;
 }
 

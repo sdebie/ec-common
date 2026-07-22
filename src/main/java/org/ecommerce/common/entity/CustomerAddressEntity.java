@@ -2,6 +2,8 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.AddressTypeEn;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -12,42 +14,45 @@ import java.util.UUID;
  * A customer may have multiple addresses of different types
  * (PHYSICAL, POSTAL, BILLING, SHIPPING).
  */
+@Getter
+@Setter
 @Entity
 @Table(name = "customer_addresses")
-public class CustomerAddressEntity extends PanacheEntityBase {
+public class CustomerAddressEntity extends PanacheEntityBase
+{
 
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", referencedColumnName = "id")
-    public CustomerEntity customer;
+    private CustomerEntity customer;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "address_type", length = 20)
-    public AddressTypeEn addressType;
+    private AddressTypeEn addressType;
 
     @Column(name = "address_line_1", nullable = false)
-    public String addressLine1;
+    private String addressLine1;
 
     @Column(name = "address_line_2")
-    public String addressLine2;
+    private String addressLine2;
 
-    public String suburb;
-
-    @Column(nullable = false)
-    public String city;
+    private String suburb;
 
     @Column(nullable = false)
-    public String province;
+    private String city;
+
+    @Column(nullable = false)
+    private String province;
 
     @Column(name = "postal_code", nullable = false)
-    public String postalCode;
+    private String postalCode;
 
     @Column(name = "is_default")
-    public boolean isDefault = false;
+    private boolean isDefault = false;
 }
 

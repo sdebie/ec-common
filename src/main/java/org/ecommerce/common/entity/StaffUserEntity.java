@@ -2,43 +2,48 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.StaffRoleEn;
 
-import java.util.UUID;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "staff_users")
-public class StaffUserEntity extends PanacheEntityBase {
-
+public class StaffUserEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
-    public UUID id; // Using UUID as requested
+    private UUID id; // Using UUID as requested
 
     @Column(unique = true, nullable = false)
-    public String email;
+    private String email;
 
     @Column(name = "password_hash", nullable = false)
-    public String passwordHash;
+    private String passwordHash;
 
     @Column(name = "full_name")
-    public String fullName;
+    private String fullName;
 
     @Enumerated(EnumType.STRING) // Stores the name (e.g., 'CATALOG_MANAGER') in DB
     @Column(nullable = false)
-    public StaffRoleEn role;
+    private StaffRoleEn role;
 
     @Column(name = "is_active")
-    public boolean isActive = true;
+    private boolean isActive = true;
 
     @Column(name = "reset_password")
-    public boolean resetPassword = false;
+    private boolean resetPassword = false;
 
     @Column(name = "created_at")
-    public LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     // Helper method for login and admin lookups
-    public static StaffUserEntity findByEmail(String email) {
+    public static StaffUserEntity findByEmail(String email)
+    {
         return find("lower(email) = lower(?1)", email).firstResult();
     }
 }

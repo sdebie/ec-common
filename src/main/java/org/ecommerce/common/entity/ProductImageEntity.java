@@ -2,9 +2,13 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "product_images")
 public class ProductImageEntity extends PanacheEntityBase {
@@ -13,18 +17,18 @@ public class ProductImageEntity extends PanacheEntityBase {
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "variant_id", nullable = false)
-    public ProductVariantEntity productVariant;
+    private ProductVariantEntity productVariant;
 
     @Column(name = "image_url", nullable = false)
-    public String imageUrl;
+    private String imageUrl;
 
     @Column(name = "sort_order")
-    public Integer sortOrder;
+    private Integer sortOrder;
 
     @Column(name = "is_featured")
-    public Boolean isFeatured;
+    private Boolean isFeatured;
 }

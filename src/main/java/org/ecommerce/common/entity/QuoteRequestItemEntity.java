@@ -1,42 +1,39 @@
 package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "quote_request_items")
-public class QuoteRequestItemEntity extends PanacheEntityBase {
-
+public class QuoteRequestItemEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "quote_request_id", referencedColumnName = "id", nullable = false)
-    public QuoteRequestEntity quoteRequest;
+    private QuoteRequestEntity quoteRequest;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "variant_id", referencedColumnName = "id", nullable = true)
-    public ProductVariantEntity variant;
+    private ProductVariantEntity variant;
 
     @Column(name = "product_name_snapshot", length = 255, nullable = false)
-    public String productNameSnapshot;
+    private String productNameSnapshot;
 
     @Column(name = "variant_sku_snapshot", length = 100)
-    public String variantSkuSnapshot;
+    private String variantSkuSnapshot;
 
     @Column(name = "quantity", nullable = false)
-    public int quantity;
+    private int quantity;
 }

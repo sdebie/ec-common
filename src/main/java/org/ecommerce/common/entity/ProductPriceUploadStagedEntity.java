@@ -2,46 +2,51 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "product_price_upload_staged")
-public class ProductPriceUploadStagedEntity extends PanacheEntityBase {
+public class ProductPriceUploadStagedEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
-    public UUID id;
+    private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "batch_id")
-    public ProductPriceUploadBatchEntity batch;
+    private ProductPriceUploadBatchEntity batch;
 
-    public String sku;
+    private String sku;
 
     @Column(name = "retail_price")
-    public BigDecimal retailPrice;
+    private BigDecimal retailPrice;
 
     @Column(name = "wholesale_price")
-    public BigDecimal wholesalePrice;
+    private BigDecimal wholesalePrice;
 
     @Column(name = "validation_status")
     @Enumerated(EnumType.STRING)
-    public ProductImportValidationStatusEn validationStatus;
+    private ProductImportValidationStatusEn validationStatus;
 
     @Column(name = "validation_errors")
-    public String validationErrors;
+    private String validationErrors;
 
-    @Column(name="has_changes")
-    public Boolean hasChanges;
+    @Column(name = "has_changes")
+    private Boolean hasChanges;
 
     @Column(name = "current_retail_price")
-    public BigDecimal currentRetailPrice;
+    private BigDecimal currentRetailPrice;
 
     @Column(name = "current_wholesale_price")
-    public BigDecimal currentWholesalePrice;
+    private BigDecimal currentWholesalePrice;
 
-    public Boolean processed = false;
+    private Boolean processed = false;
 }
 

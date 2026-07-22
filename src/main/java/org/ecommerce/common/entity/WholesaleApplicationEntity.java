@@ -1,132 +1,127 @@
 package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import org.hibernate.annotations.UuidGenerator;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.WholesaleApplicationStatusEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "wholesale_applications")
-public class WholesaleApplicationEntity extends PanacheEntityBase {
-
+public class WholesaleApplicationEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @Column(name = "applicant_email", nullable = false)
-    public String applicantEmail;
+    private String applicantEmail;
 
     @Column(name = "account_email")
-    public String accountEmail;
+    private String accountEmail;
 
     @Column(name = "first_name", nullable = false)
-    public String firstName;
+    private String firstName;
 
     @Column(name = "last_name")
-    public String lastName;
+    private String lastName;
 
     @Column(name = "phone")
-    public String phone;
+    private String phone;
 
     @Column(name = "company_name", nullable = false)
-    public String companyName;
+    private String companyName;
 
     @Column(name = "trading_name")
-    public String tradingName;
+    private String tradingName;
 
     @Column(name = "company_phone")
-    public String companyPhone;
+    private String companyPhone;
 
     @Column(name = "company_email")
-    public String companyEmail;
+    private String companyEmail;
 
     @Column(name = "vat_number")
-    public String vatNumber;
+    private String vatNumber;
 
     @Column(name = "reg_number")
-    public String regNumber;
+    private String regNumber;
 
     @Column(name = "finance_contact_name")
-    public String financeContactName;
+    private String financeContactName;
 
     @Column(name = "finance_contact_email")
-    public String financeContactEmail;
+    private String financeContactEmail;
 
     @Column(name = "finance_contact_phone")
-    public String financeContactPhone;
+    private String financeContactPhone;
 
     @Column(name = "purchase_order_required")
-    public Boolean purchaseOrderRequired = false;
+    private Boolean purchaseOrderRequired = false;
 
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    public WholesaleApplicationStatusEn status = WholesaleApplicationStatusEn.PENDING;
+    private WholesaleApplicationStatusEn status = WholesaleApplicationStatusEn.PENDING;
 
     @Column(name = "notes")
-    public String notes;
+    private String notes;
 
     @Column(name = "created_at")
-    public OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 
     @Column(name = "processed_at")
-    public OffsetDateTime processedAt;
+    private OffsetDateTime processedAt;
 
     @Column(name = "rejection_reason")
-    public String rejectionReason;
+    private String rejectionReason;
 
     @Column(name = "physical_address_line1")
-    public String physicalAddressLine1;
+    private String physicalAddressLine1;
 
     @Column(name = "physical_address_line2")
-    public String physicalAddressLine2;
+    private String physicalAddressLine2;
 
     @Column(name = "physical_suburb")
-    public String physicalSuburb;
+    private String physicalSuburb;
 
     @Column(name = "physical_city")
-    public String physicalCity;
+    private String physicalCity;
 
     @Column(name = "physical_province")
-    public String physicalProvince;
+    private String physicalProvince;
 
     @Column(name = "physical_postal_code")
-    public String physicalPostalCode;
+    private String physicalPostalCode;
 
     @Column(name = "postal_address_line1")
-    public String postalAddressLine1;
+    private String postalAddressLine1;
 
     @Column(name = "postal_address_line2")
-    public String postalAddressLine2;
+    private String postalAddressLine2;
 
     @Column(name = "postal_suburb")
-    public String postalSuburb;
+    private String postalSuburb;
 
     @Column(name = "postal_province")
-    public String postalProvince;
+    private String postalProvince;
 
     @Column(name = "postal_city")
-    public String postalCity;
+    private String postalCity;
 
     @Column(name = "postal_postal_code")
-    public String postalPostalCode;
+    private String postalPostalCode;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", unique = true)
-    public CustomerEntity customer;
+    private CustomerEntity customer;
 }
 

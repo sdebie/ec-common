@@ -2,6 +2,8 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.OffsetDateTime;
@@ -12,71 +14,75 @@ import java.util.UUID;
  * Credentials, security tokens, and roles live here.
  * Profile/personal data lives in the linked {@link CustomerEntity}.
  */
+@Getter
+@Setter
 @Entity
 @Table(name = "users")
-public class UserEntity extends PanacheEntityBase {
+public class UserEntity extends PanacheEntityBase
+{
 
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @Column(unique = true, nullable = false)
-    public String email;
+    private String email;
 
     @Column(name = "password_hash", nullable = false)
-    public String passwordHash;
+    private String passwordHash;
 
     /**
      * PostgreSQL TEXT[] column — roles such as 'RETAIL', 'WHOLESALE'.
      * Default mirrors the DB default of '{RETAIL}'.
      */
     @Column(name = "roles", columnDefinition = "text[]")
-    public String[] roles = new String[]{"RETAIL"};
+    private String[] roles = new String[]{"RETAIL"};
 
     @Column(name = "is_active")
-    public boolean isActive = true;
+    private boolean isActive = true;
 
     @Column(name = "mfa_enabled")
-    public boolean mfaEnabled = false;
+    private boolean mfaEnabled = false;
 
     @Column(name = "last_login")
-    public OffsetDateTime lastLogin;
+    private OffsetDateTime lastLogin;
 
     @Column(name = "created_at")
-    public OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 
     // ── Security tokens ────────────────────────────────────────────────────
     @Column(name = "reset_token")
-    public String resetToken;
+    private String resetToken;
 
     @Column(name = "reset_token_expiry")
-    public OffsetDateTime resetTokenExpiry;
+    private OffsetDateTime resetTokenExpiry;
 
     @Column(name = "password_reset_code_hash")
-    public String passwordResetCodeHash;
+    private String passwordResetCodeHash;
 
     @Column(name = "password_reset_code_expiry")
-    public OffsetDateTime passwordResetCodeExpiry;
+    private OffsetDateTime passwordResetCodeExpiry;
 
     @Column(name = "password_reset_code_attempts")
-    public int passwordResetCodeAttempts = 0;
+    private int passwordResetCodeAttempts = 0;
 
     @Column(name = "password_reset_code_locked_until")
-    public OffsetDateTime passwordResetCodeLockedUntil;
+    private OffsetDateTime passwordResetCodeLockedUntil;
 
     // ── Relationships ───────────────────────────────────────────────────────
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public CustomerEntity customer;
+    private CustomerEntity customer;
 
     // ── Helpers ─────────────────────────────────────────────────────────────
-
-    public static UserEntity findByEmail(String email) {
+    public static UserEntity findByEmail(String email)
+    {
         return find("lower(email) = lower(?1)", email).firstResult();
     }
 
-    public static UserEntity findByResetToken(String token) {
+    public static UserEntity findByResetToken(String token)
+    {
         return find("resetToken", token).firstResult();
     }
 }

@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.CustomerStatusEn;
 import org.ecommerce.common.enums.CustomerTypeEn;
 import org.hibernate.annotations.UuidGenerator;
@@ -18,58 +19,61 @@ import java.util.UUID;
  * Contacts live in {@link CustomerContactEntity}.
  * Wholesale-specific data lives in {@link WholesaleProfileEntity}.
  */
-@Entity
 @Getter
+@Setter
+@Entity
 @Table(name = "customers")
-public class CustomerEntity extends PanacheEntityBase {
+public class CustomerEntity extends PanacheEntityBase
+{
 
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     // ── Link to user account ────────────────────────────────────────────────
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
-    public UserEntity user;
+    private UserEntity user;
 
     // ── Profile ─────────────────────────────────────────────────────────────
     @Column(name = "first_name")
-    public String firstName;
+    private String firstName;
 
     @Column(name = "last_name")
-    public String lastName;
+    private String lastName;
 
-    public String phone;
+    private String phone;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "shopper_type")
-    public CustomerTypeEn shopperType;
+    private CustomerTypeEn shopperType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    public CustomerStatusEn status = CustomerStatusEn.PENDING;
+    private CustomerStatusEn status = CustomerStatusEn.PENDING;
 
     // ── Relationships ────────────────────────────────────────────────────────
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<CustomerAddressEntity> addresses = new ArrayList<>();
+    private List<CustomerAddressEntity> addresses = new ArrayList<>();
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<CustomerContactEntity> contacts = new ArrayList<>();
+    private List<CustomerContactEntity> contacts = new ArrayList<>();
 
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public WholesaleProfileEntity wholesaleProfile;
+    private WholesaleProfileEntity wholesaleProfile;
 
     @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL)
-    public List<OrderEntity> orderEntities;
+    private List<OrderEntity> orderEntities;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
      * Finds a customer by the email stored on the linked {@link UserEntity}.
      */
-    public static CustomerEntity findByEmail(String email) {
+    public static CustomerEntity findByEmail(String email)
+    {
         return find("lower(user.email) = lower(?1)", email).firstResult();
     }
 

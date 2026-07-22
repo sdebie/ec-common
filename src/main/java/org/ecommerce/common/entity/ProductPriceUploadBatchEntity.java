@@ -2,48 +2,52 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.ProductUploadStatusEn;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "product_price_upload_batches")
 public class ProductPriceUploadBatchEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue
-    public UUID id;
+    private UUID id;
 
-    public String filename;
+    private String filename;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    public ProductUploadStatusEn productUploadStatusEn;
+    private ProductUploadStatusEn productUploadStatusEn;
 
     @ManyToOne
     @JoinColumn(name = "uploaded_by")
-    public StaffUserEntity uploadedBy;
+    private StaffUserEntity uploadedBy;
 
     @Column(name = "total_rows")
-    public Integer totalRows = 0;
+    private Integer totalRows = 0;
 
     @Column(name = "processed_rows")
-    public Integer processedRows = 0;
+    private Integer processedRows = 0;
 
     @Column(name = "skipped_rows")
-    public Integer skippedRows = 0;
+    private Integer skippedRows = 0;
 
     @Column(name = "validation_error_count")
-    public Integer validationErrorCount = 0;
+    private Integer validationErrorCount = 0;
 
     @Column(name = "created_at")
-    public LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "completed_at")
-    public LocalDateTime completedAt;
+    private LocalDateTime completedAt;
 
     @ManyToOne
     @JoinColumn(name = "approved_by")
-    public StaffUserEntity approvedBy;
+    private StaffUserEntity approvedBy;
 }
 
