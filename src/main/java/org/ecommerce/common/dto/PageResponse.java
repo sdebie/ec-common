@@ -1,6 +1,5 @@
 package org.ecommerce.common.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,7 +13,6 @@ import java.util.List;
  */
 @Getter
 @Setter
-@AllArgsConstructor
 public class PageResponse<T>
 {
     private List<T> content;
@@ -22,4 +20,13 @@ public class PageResponse<T>
     private int totalPages;
     private int pageIndex;
     private int pageSize;
+
+    public PageResponse(List<T> content, long totalElements, int totalPages, int pageIndex, int pageSize)
+    {
+        this.content = content;
+        this.totalElements = totalElements;
+        this.totalPages = totalPages;
+        this.pageIndex = pageIndex;
+        this.pageSize = pageSize;
+    }
 }
