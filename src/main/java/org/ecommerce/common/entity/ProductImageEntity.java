@@ -2,16 +2,22 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
+
 import java.util.UUID;
 
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Table(name = "product_images")
-public class ProductImageEntity extends PanacheEntityBase {
+@NoArgsConstructor
+public class ProductImageEntity extends PanacheEntityBase
+{
 
     @Id
     @GeneratedValue

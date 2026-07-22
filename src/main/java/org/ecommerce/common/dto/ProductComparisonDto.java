@@ -35,9 +35,9 @@ public class ProductComparisonDto
     private String currentShortDescription;
     private String proposedShortDescription;
 
-    private boolean isValidCategory;
-    private boolean isValidBrand;
-    private boolean isNewProduct;
-    private boolean isNewVariant;
-    public boolean hasChanges;
+    private boolean validCategory;
+    private boolean validBrand;
+    private boolean newProduct;
+    private boolean newVariant;
+    private boolean hasChanges;
 }

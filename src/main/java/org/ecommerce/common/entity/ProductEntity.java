@@ -36,7 +36,9 @@ public class ProductEntity extends PanacheEntityBase
 
     public void setCategory(CategoryEntity cat)
     {
-        if (cat == null) return;
+        if (cat == null) {
+            return;
+        }
         this.categories.add(cat);
     }
 
