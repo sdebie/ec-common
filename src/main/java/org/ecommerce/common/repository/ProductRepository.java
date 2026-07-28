@@ -4,7 +4,6 @@ import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.dto.PageResponse;
-import org.ecommerce.common.dto.ProductListItemDto;
 import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
@@ -51,110 +50,6 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 "left join fetch p.brand " +
                 "where p.id = ?1", productId)
                 .firstResult();
-    }
-
-    public List<ProductListItemDto> findAllProductListItems(PageRequest pageRequest, FilterRequest filterRequest, boolean ignoreStatus)
-    {
-        LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> basePriceTypes = List.of(
-                PriceTypeEn.RETAIL_PRICE,
-                PriceTypeEn.WHOLESALE_PRICE);
-        FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
-
-        String query = "select distinct p from ProductEntity p " +
-                "left join fetch p.categories " +
-                "left join fetch p.brand " +
-                (hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
-
-        if (queryBuilder.hasQuery()) {
-            query += " AND " + queryBuilder.query();
-        }
-
-        // Append a fully-qualified ORDER BY directly into HQL to avoid Hibernate's
-        // "Ambiguous unqualified attribute reference 'name'" error that arises when
-        // both ProductEntity (p) and the join-fetched CategoryEntity share a 'name' field.
-        query += buildOrderByClause(normalizedFilterRequest != null ? normalizedFilterRequest.getSort() : null, "p");
-
-        Map<String, Object> params = new LinkedHashMap<>();
-        params.put("priceTypes", basePriceTypes);
-        params.put("now", now);
-        if (!ignoreStatus) {
-            params.put("variantStatus", ProductStatusEn.ACTIVE);
-        }
-        if (queryBuilder.hasParams()) {
-            params.putAll(queryBuilder.params());
-        }
-
-        return find(query, params)
-                .page(queryBuilder.page(pageRequest)).list().stream()
-                .map(this::toProductListItemDto)
-                .toList();
-    }
-
-    public List<ProductListItemDto> findProductListItemsByCategoryIds(PageRequest pageRequest, FilterRequest filterRequest, List<UUID> categoryIds, boolean ignoreStatus)
-    {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> basePriceTypes = List.of(
-                PriceTypeEn.RETAIL_PRICE,
-                PriceTypeEn.WHOLESALE_PRICE);
-        FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
-
-        String query = "select distinct p from ProductEntity p " +
-                "left join fetch p.categories " +
-                "left join fetch p.brand " +
-                (hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
-                "where exists (" +
-                "select 1 from ProductEntity scopedProduct " +
-                "join scopedProduct.categories scopedCategory " +
-                "where scopedProduct = p " +
-                "and scopedCategory.id in :categoryIds" +
-                ") " +
-                "and exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
-
-        if (queryBuilder.hasQuery()) {
-            query += " AND " + queryBuilder.query();
-        }
-
-        query += buildOrderByClause(normalizedFilterRequest != null ? normalizedFilterRequest.getSort() : null, "p");
-
-        Map<String, Object> params = new LinkedHashMap<>();
-        params.put("categoryIds", categoryIds);
-        params.put("priceTypes", basePriceTypes);
-        params.put("now", now);
-        if (!ignoreStatus) {
-            params.put("variantStatus", ProductStatusEn.ACTIVE);
-        }
-        if (queryBuilder.hasParams()) {
-            params.putAll(queryBuilder.params());
-        }
-
-        return find(query, params)
-                .page(queryBuilder.page(pageRequest)).list().stream()
-                .map(this::toProductListItemDto)
-                .toList();
     }
 
     public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
@@ -430,28 +325,6 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         }
 
         return "p." + key;
-    }
-
-    private ProductListItemDto toProductListItemDto(ProductEntity product)
-    {
-        List<String> categoryNames = new ArrayList<>();
-
-        if (product.getCategories() != null && !product.getCategories().isEmpty()) {
-            categoryNames = product.getCategories().stream()
-                    .map(CategoryEntity::getName)
-                    .toList();
-        }
-
-        ProductListItemDto dto = new ProductListItemDto(
-                product.getId() == null ? null : product.getId().toString(),
-                product.getName(),
-                product.getDescription(),
-                null,
-                Collections.emptyList(),
-                categoryNames,
-                product.getBrand() != null ? product.getBrand().getName() : null);
-        dto.setStatus(product.getStatus() == null ? null : product.getStatus().name());
-        return dto;
     }
 
     // ─── Best Sellers ──────────────────────────────────────────────────────────
