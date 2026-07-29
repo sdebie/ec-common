@@ -1,5 +1,7 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
@@ -8,47 +10,51 @@ import java.util.List;
 /**
  * Storefront DTO for shopping product cards with consolidated active pricing.
  */
+@Getter
+@Setter
 @Type
-public class ProductShoppingListItemDto {
+public class ProductShoppingListItemDto
+{
     @Description("Product ID (UUID as string)")
-    public String id;
+    private String id;
 
     @Description("Product name")
-    public String name;
+    private String name;
 
     @Description("URL slug for routing to the product detail page")
-    public String slug;
+    private String slug;
 
     @Description("Product short description")
-    public String shortDescription;
+    private String shortDescription;
 
     @Description("Product type (e.g. SIMPLE or VARIABLE)")
-    public String productType;
+    private String productType;
 
     @Description("Product status")
-    public String status;
+    private String status;
 
     @Description("Total number of variants for this product")
-    public Integer variantCount;
+    private Integer variantCount;
 
     @Description("Variant ID for SIMPLE products; null for non-SIMPLE products")
-    public String variantId;
+    private String variantId;
 
     @Description("Product images including featured flag")
-    public List<ProductImageDto> images;
+    private List<ProductImageDto> images;
 
     @Description("Lowest active retail price in the current window with oldest start date")
-    public VariantPriceDto retailPrice;
+    private VariantPriceDto retailPrice;
 
     @Description("Lowest active wholesale price in the current window with oldest start date")
-    public VariantPriceDto wholesalePrice;
+    private VariantPriceDto wholesalePrice;
 
     @Description("Lowest active retail sale price in the current window with oldest start date")
-    public VariantPriceDto retailSalePrice;
+    private VariantPriceDto retailSalePrice;
 
     @Description("Lowest active wholesale sale price in the current window with oldest start date")
-    public VariantPriceDto wholesaleSalePrice;
+    private VariantPriceDto wholesaleSalePrice;
 
-    public ProductShoppingListItemDto() {
+    public ProductShoppingListItemDto()
+    {
     }
 }

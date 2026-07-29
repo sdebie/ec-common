@@ -8,7 +8,8 @@ import org.ecommerce.common.entity.StoreSettingsEntity;
 import java.util.List;
 
 @ApplicationScoped
-public class SettingsRepository extends BaseRepository<StoreSettingsEntity, String>{
+public class SettingsRepository extends BaseRepository<StoreSettingsEntity, String>
+{
 
     @Override
     protected Class<StoreSettingsEntity> getEntityClass()
@@ -16,24 +17,29 @@ public class SettingsRepository extends BaseRepository<StoreSettingsEntity, Stri
         return StoreSettingsEntity.class;
     }
 
-    public List<StoreSettingsEntity> getAllStoreSettings() {
+    public List<StoreSettingsEntity> getAllStoreSettings()
+    {
         return StoreSettingsEntity.listAll();
     }
 
-    public List<ShippingMethodEntity> getAllShippingMethods() {
+    public List<ShippingMethodEntity> getAllShippingMethods()
+    {
         return ShippingMethodEntity.listAll();
     }
 
-    public List<CountrySettingsEntity> getAllCountrySettings() {
+    public List<CountrySettingsEntity> getAllCountrySettings()
+    {
         return CountrySettingsEntity.listAll();
     }
 
-    public void saveStoreSettings(StoreSettingsEntity entity) {
+    public void saveStoreSettings(StoreSettingsEntity entity)
+    {
         getEntityManager().merge(entity);
     }
 
-    public ShippingMethodEntity saveShippingMethod(ShippingMethodEntity entity) {
-        if (entity.id == null) {
+    public ShippingMethodEntity saveShippingMethod(ShippingMethodEntity entity)
+    {
+        if (entity.getId() == null) {
             entity.persist();
             return entity;
         } else {

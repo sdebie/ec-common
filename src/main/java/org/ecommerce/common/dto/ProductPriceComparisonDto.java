@@ -1,22 +1,27 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public class ProductPriceComparisonDto {
-    public UUID stagedId;
-    public String sku;
+@Getter
+@Setter
+public class ProductPriceComparisonDto
+{
+    private UUID stagedId;
+    private String sku;
 
-    public String validationErrors;
-    public ProductImportValidationStatusEn validationStatus;
+    private String validationErrors;
+    private ProductImportValidationStatusEn validationStatus;
 
-    public BigDecimal currentRetailPrice;
-    public BigDecimal proposedRetailPrice;
+    private BigDecimal currentRetailPrice;
+    private BigDecimal proposedRetailPrice;
 
-    public BigDecimal currentWholesalePrice;
-    public BigDecimal proposedWholesalePrice;
+    private BigDecimal currentWholesalePrice;
+    private BigDecimal proposedWholesalePrice;
 
-    public boolean hasChanges;
+    private boolean hasChanges;
 }

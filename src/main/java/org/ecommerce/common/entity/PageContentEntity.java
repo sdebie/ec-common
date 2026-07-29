@@ -2,11 +2,15 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "page_content")
 public class PageContentEntity extends PanacheEntityBase {
@@ -15,29 +19,29 @@ public class PageContentEntity extends PanacheEntityBase {
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @Column(name = "slug", nullable = false, unique = true)
-    public String slug;
+    private String slug;
 
     @Column(name = "title", nullable = false)
-    public String title;
+    private String title;
 
     @Column(name = "category", nullable = false)
-    public String category;
+    private String category;
 
     @Column(name = "draft_content", columnDefinition = "TEXT")
-    public String draftContent;
+    private String draftContent;
 
     @Column(name = "published_content", columnDefinition = "TEXT")
-    public String publishedContent;
+    private String publishedContent;
 
     @Column(name = "published_at")
-    public OffsetDateTime publishedAt;
+    private OffsetDateTime publishedAt;
 
     @Column(name = "created_at", nullable = false)
-    public OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 
     @Column(name = "updated_at", nullable = false)
-    public OffsetDateTime updatedAt = OffsetDateTime.now();
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
 }

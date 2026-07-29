@@ -2,8 +2,10 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
-import org.hibernate.annotations.UuidGenerator;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.PriceTypeEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,56 +17,60 @@ import java.util.UUID;
  * Each variant can have multiple prices for different scenarios:
  * - RETAIL_PRICE and RETAIL_SALE_PRICE for retail customers
  * - WHOLESALE_PRICE and WHOLESALE_SALE_PRICE for wholesale customers
- *
+ * <p>
  * The price_start_date and price_end_date allow for time-limited pricing (e.g., promotions).
  */
+@Getter
+@Setter
 @Entity
 @Table(name = "variant_prices")
-public class VariantPricesEntity extends PanacheEntityBase {
-
+public class VariantPricesEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "variant_id", nullable = false)
-    public ProductVariantEntity variant;
+    private ProductVariantEntity variant;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "price_type", nullable = false)
-    public PriceTypeEn priceType;
+    private PriceTypeEn priceType;
 
     @Column(nullable = false, precision = 12, scale = 2)
-    public BigDecimal price;
+    private BigDecimal price;
 
     @Column(name = "price_start_date")
-    public LocalDateTime priceStartDate;
+    private LocalDateTime priceStartDate;
 
     @Column(name = "price_end_date")
-    public LocalDateTime priceEndDate;
+    private LocalDateTime priceEndDate;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    public LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "created_by")
-    public UUID createdBy;
+    private UUID createdBy;
 
     @Column(name = "updated_at")
-    public LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
     @Column(name = "updated_by")
-    public UUID updatedBy;
+    private UUID updatedBy;
 
     @PrePersist
-    protected void onCreate() {
+    protected void onCreate()
+    {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    protected void onUpdate() {
+    protected void onUpdate()
+    {
         updatedAt = LocalDateTime.now();
     }
 
@@ -73,7 +79,8 @@ public class VariantPricesEntity extends PanacheEntityBase {
     /**
      * Checks if the price is currently active (within its date range).
      */
-    public boolean isActive() {
+    public boolean isActive()
+    {
         LocalDateTime now = LocalDateTime.now();
         if (priceStartDate != null && now.isBefore(priceStartDate)) {
             return false;
@@ -87,7 +94,8 @@ public class VariantPricesEntity extends PanacheEntityBase {
     /**
      * Find all prices for a specific variant.
      */
-    public static List<VariantPricesEntity> findByVariantId(UUID variantId) {
+    public static List<VariantPricesEntity> findByVariantId(UUID variantId)
+    {
         if (variantId == null) return List.of();
         return list("variant.id = ?1 order by priceType asc, createdAt desc", variantId);
     }
@@ -95,57 +103,61 @@ public class VariantPricesEntity extends PanacheEntityBase {
     /**
      * Find the active price for a variant by type.
      */
-    public static VariantPricesEntity findActiveByVariantAndType(UUID variantId, PriceTypeEn priceType) {
+    public static VariantPricesEntity findActiveByVariantAndType(UUID variantId, PriceTypeEn priceType)
+    {
         if (variantId == null || priceType == null) return null;
 
         LocalDateTime now = LocalDateTime.now();
         return find(
-            "variant.id = ?1 and priceType = ?2 and (priceStartDate is null or priceStartDate <= ?3) " +
-            "and (priceEndDate is null or priceEndDate >= ?3) " +
-            "order by updatedAt desc",
-            variantId, priceType, now
+                "variant.id = ?1 and priceType = ?2 and (priceStartDate is null or priceStartDate <= ?3) " +
+                        "and (priceEndDate is null or priceEndDate >= ?3) " +
+                        "order by updatedAt desc",
+                variantId, priceType, now
         ).firstResult();
     }
 
     /**
      * Find the latest price record for a variant by type (regardless of date range).
      */
-    public static VariantPricesEntity findLatestByVariantAndType(UUID variantId, PriceTypeEn priceType) {
+    public static VariantPricesEntity findLatestByVariantAndType(UUID variantId, PriceTypeEn priceType)
+    {
         if (variantId == null || priceType == null) return null;
 
         return find(
-            "variant.id = ?1 and priceType = ?2 order by updatedAt desc",
-            variantId, priceType
+                "variant.id = ?1 and priceType = ?2 order by updatedAt desc",
+                variantId, priceType
         ).firstResult();
     }
 
     /**
      * Find all active prices for a variant.
      */
-    public static List<VariantPricesEntity> findActiveByVariantId(UUID variantId) {
+    public static List<VariantPricesEntity> findActiveByVariantId(UUID variantId)
+    {
         if (variantId == null) return List.of();
 
         LocalDateTime now = LocalDateTime.now();
         return list(
-            "variant.id = ?1 and (priceStartDate is null or priceStartDate <= ?2) " +
-            "and (priceEndDate is null or priceEndDate >= ?2) " +
-            "order by priceType asc",
-            variantId, now
+                "variant.id = ?1 and (priceStartDate is null or priceStartDate <= ?2) " +
+                        "and (priceEndDate is null or priceEndDate >= ?2) " +
+                        "order by priceType asc",
+                variantId, now
         );
     }
 
     /**
      * Find all active prices for a variant and list of price types.
      */
-    public static List<VariantPricesEntity> findActiveByVariantAndTypes(UUID variantId, List<PriceTypeEn> priceTypes) {
+    public static List<VariantPricesEntity> findActiveByVariantAndTypes(UUID variantId, List<PriceTypeEn> priceTypes)
+    {
         if (variantId == null || priceTypes == null || priceTypes.isEmpty()) return List.of();
 
         LocalDateTime now = LocalDateTime.now();
         return list(
-            "variant.id = ?1 and priceType in ?2 and (priceStartDate is null or priceStartDate <= ?3) " +
-            "and (priceEndDate is null or priceEndDate >= ?3) " +
-            "order by priceType asc",
-            variantId, priceTypes, now
+                "variant.id = ?1 and priceType in ?2 and (priceStartDate is null or priceStartDate <= ?3) " +
+                        "and (priceEndDate is null or priceEndDate >= ?3) " +
+                        "order by priceType asc",
+                variantId, priceTypes, now
         );
     }
 }

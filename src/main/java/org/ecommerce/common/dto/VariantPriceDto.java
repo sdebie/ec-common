@@ -1,5 +1,7 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
@@ -11,28 +13,33 @@ import java.time.LocalDateTime;
  * Includes price type, customer type, amount, and validity period.
  */
 @Type
-public class VariantPriceDto {
+@Getter
+@Setter
+public class VariantPriceDto
+{
     @Description("Price ID (UUID as string)")
-    public String id;
+    private String id;
 
     @Description("Price type: RETAIL_PRICE, RETAIL_SALE_PRICE, WHOLESALE_PRICE, WHOLESALE_SALE_PRICE")
-    public String priceType;
+    private String priceType;
 
     @Description("Price amount")
-    public BigDecimal price;
+    private BigDecimal price;
 
     @Description("When this price becomes active (null = always active)")
-    public LocalDateTime priceStartDate;
+    private LocalDateTime priceStartDate;
 
     @Description("When this price expires (null = never expires)")
-    public LocalDateTime priceEndDate;
+    private LocalDateTime priceEndDate;
 
     @Description("Whether this price is currently active based on date range")
-    public Boolean isActive;
+    private Boolean isActive;
 
     @Description("Number of days remaining for sale prices (RETAIL_SALE_PRICE / WHOLESALE_SALE_PRICE); null for non-sale or no end date")
-    public Long saleDaysRemaining;
+    private Long saleDaysRemaining;
 
-    public VariantPriceDto() {}
+    public VariantPriceDto()
+    {
+    }
 
 }

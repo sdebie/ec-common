@@ -1,5 +1,7 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
@@ -9,44 +11,49 @@ import java.util.List;
 /**
  * DTO that represents the full product information available for product detail views.
  */
+@Getter
+@Setter
 @Type
-public class ProductDto {
+public class ProductDto
+{
     @Description("Product ID (UUID as string)")
-    public String id;
+    private String id;
 
     @Description("Product slug")
-    public String slug;
+    private String slug;
 
     @Description("Product name")
-    public String name;
+    private String name;
 
     @Description("Product description")
-    public String description;
+    private String description;
 
     @Description("Product short description")
-    public String shortDescription;
+    private String shortDescription;
 
     @Description("Product type")
-    public String productType;
+    private String productType;
 
     @Description("Product status")
-    public String status;
+    private String status;
 
     @Description("Product created date/time")
-    public String createdAt;
+    private String createdAt;
 
     @Description("Primary/first category (for backward compatibility)")
-    public CategoryDto category;
+    private CategoryDto category;
 
     @Description("All categories this product belongs to")
-    public List<CategoryDto> categories = new ArrayList<>();
+    private List<CategoryDto> categories = new ArrayList<>();
 
     @Description("Brand")
-    public BrandDto brand;
+    private BrandDto brand;
 
     @Description("Product variants")
-    public List<ProductVariantDto> variants = new ArrayList<>();
+    private List<ProductVariantDto> variants = new ArrayList<>();
 
-    public ProductDto() {}
+    public ProductDto()
+    {
+    }
 }
 

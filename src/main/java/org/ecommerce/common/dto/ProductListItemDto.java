@@ -1,5 +1,7 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
@@ -9,38 +11,44 @@ import java.util.List;
 /**
  * Minimal DTO for listing products on the storefront.
  */
+@Getter
+@Setter
 @Type
-public class ProductListItemDto {
+public class ProductListItemDto
+{
     @Description("Product ID (UUID as string)")
-    public String id;
+    private String id;
 
     @Description("Product name")
-    public String name;
+    private String name;
 
     @Description("Short description")
-    public String description;
+    private String description;
 
     @Description("All category names this product belongs to")
-    public List<String> categoryNames = new ArrayList<>();
+    private List<String> categoryNames = new ArrayList<>();
 
     @Description("Brand Name")
-    public String brandName;
+    private String brandName;
 
     @Description("Featured variant image URL")
-    public String imageName;
+    private String imageName;
 
     @Description("All variant IDs for this product")
-    public List<String> variantIds;
+    private List<String> variantIds;
 
     @Description("Product status")
-    public String status;
+    private String status;
 
-    public ProductListItemDto() {}
+    public ProductListItemDto()
+    {
+    }
 
     public ProductListItemDto(String id, String name, String description,
                               String imageName,
                               List<String> variantIds, List<String> categoryNames,
-                              String brandName) {
+                              String brandName)
+    {
         this.id = id;
         this.name = name;
         this.description = description;

@@ -2,29 +2,34 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
-import java.math.BigDecimal;
-import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
 // Structured Shipping Methods
+@Getter
+@Setter
 @Entity
 @Table(name = "shipping_methods")
-public class ShippingMethodEntity extends PanacheEntityBase {
-
+public class ShippingMethodEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
-    public String name;
+    private String name;
 
     @Column(name = "is_active")
-    public boolean isActive = true;
+    private boolean isActive = true;
 
     @Column(name = "base_fee")
-    public BigDecimal baseFee;
+    private BigDecimal baseFee;
 
     @Column(name = "estimated_days")
-    public String estimatedDays;
+    private String estimatedDays;
 }

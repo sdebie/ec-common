@@ -9,12 +9,7 @@ import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
 import org.ecommerce.common.query.enums.SortDirection;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @ApplicationScoped
 public class OrderRepository extends BaseRepository<OrderEntity, UUID>
@@ -67,14 +62,14 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 
     private void hydrateVariantImages(OrderEntity order)
     {
-        if (order == null || order.items == null || order.items.isEmpty()) {
+        if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
             return;
         }
 
         Set<UUID> variantIds = new HashSet<>();
-        for (OrderItemEntity item : order.items) {
-            if (item != null && item.variant != null && item.variant.id != null) {
-                variantIds.add(item.variant.id);
+        for (OrderItemEntity item : order.getItems()) {
+            if (item != null && item.getVariant() != null && item.getVariant().getId() != null) {
+                variantIds.add(item.getVariant().getId());
             }
         }
 
@@ -102,10 +97,10 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 
         List<OrderEntity> hydratedOrders = new ArrayList<>(pagedOrders.size());
         for (OrderEntity order : pagedOrders) {
-            if (order == null || order.id == null) {
+            if (order == null || order.getId() == null) {
                 continue;
             }
-            OrderEntity fullOrder = findOrderInfoById(order.id);
+            OrderEntity fullOrder = findOrderInfoById(order.getId());
             if (fullOrder != null) {
                 hydratedOrders.add(fullOrder);
             }

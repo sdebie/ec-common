@@ -1,31 +1,39 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
 /**
  * DTO representing a product image object (keeps object shape rather than plain URL strings).
  */
+@Getter
+@Setter
 @Type
-public class ProductImageDto {
+public class ProductImageDto
+{
     @Description("Image ID (UUID as string)")
-    public String id;
+    private String id;
 
     @Description("Image URL")
-    public String imageUrl;
+    private String imageUrl;
 
     @Description("Sort order for display")
-    public Integer sortOrder;
+    private Integer sortOrder;
 
     @Description("Whether this image is featured")
-    public boolean isFeatured;
+    private boolean featured;
 
-    public ProductImageDto() {}
+    public ProductImageDto()
+    {
+    }
 
-    public ProductImageDto(String id, String imageUrl, Integer sortOrder, boolean isFeatured) {
+    public ProductImageDto(String id, String imageUrl, Integer sortOrder, boolean featured)
+    {
         this.id = id;
         this.imageUrl = imageUrl;
         this.sortOrder = sortOrder;
-        this.isFeatured = isFeatured;
+        this.featured = featured;
     }
 }

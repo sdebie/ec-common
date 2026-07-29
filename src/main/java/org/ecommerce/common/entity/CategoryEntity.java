@@ -7,8 +7,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "categories")
 public class CategoryEntity extends PanacheEntityBase
@@ -18,24 +22,24 @@ public class CategoryEntity extends PanacheEntityBase
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    public UUID id;
+    private UUID id;
 
     @Column(nullable = false)
-    public String name;
+    private String name;
 
     @Column(nullable = false, unique = true)
-    public String slug;
+    private String slug;
 
     @Column(columnDefinition = "TEXT")
-    public String description;
+    private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    public CategoryEntity parent;
+    private CategoryEntity parent;
 
     @Column(name = "image_url")
-    public String imageUrl;
+    private String imageUrl;
 
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "categories")
-    public Set<ProductEntity> products = new HashSet<>();
+    private Set<ProductEntity> products = new HashSet<>();
 }

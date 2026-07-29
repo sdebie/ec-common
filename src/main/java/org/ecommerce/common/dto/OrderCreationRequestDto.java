@@ -1,16 +1,13 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
-public class OrderCreationRequestDto {
-
+@Setter
+@Getter
+public class OrderCreationRequestDto
+{
     private List<OrderCreationItemDto> items;
-
-    public List<OrderCreationItemDto> getItems() {
-        return items;
-    }
-
-    public void setItems(List<OrderCreationItemDto> items) {
-        this.items = items;
-    }
 }

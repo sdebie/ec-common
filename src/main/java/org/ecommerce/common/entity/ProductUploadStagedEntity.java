@@ -2,89 +2,94 @@ package org.ecommerce.common.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "product_upload_staged")
-public class ProductUploadStagedEntity extends PanacheEntityBase {
+public class ProductUploadStagedEntity extends PanacheEntityBase
+{
     @Id
     @GeneratedValue
-    public UUID id;
+    private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "batch_id")
-    public ProductUploadBatchEntity batch;
+    private ProductUploadBatchEntity batch;
 
     @Column(name = "product_slug")
-    public String productSlug;
+    private String productSlug;
 
-    public String sku;
-    public String name;
+    private String sku;
+    private String name;
 
-    public String description;
+    private String description;
     @Column(name = "short_description")
-    public String shortDescription;
+    private String shortDescription;
 
     @Column(name = "category_slug")
-    public String categorySlug;
+    private String categorySlug;
 
     @Column(name = "brand_slug")
-    public String brandSlug;
+    private String brandSlug;
 
     @Column(name = "stock")
-    public Integer stock;
+    private Integer stock;
 
     @Column(name = "images")
-    public String images;
+    private String images;
 
     @Column(name = "attributes")
-    public String attributes;
+    private String attributes;
 
     @Column(name = "is_valid_category")
-    public Boolean isValidCategory;
+    private Boolean isValidCategory;
 
     @Column(name = "is_valid_brand")
-    public Boolean isValidBrand;
+    private Boolean isValidBrand;
 
     @Column(name = "is_new_product")
-    public Boolean isNewProduct;
+    private Boolean isNewProduct;
 
     @Column(name = "is_new_variant")
-    public Boolean isNewVariant;
+    private Boolean isNewVariant;
 
     @Column(name = "validation_errors")
-    public String validationErrors;
+    private String validationErrors;
 
     @Column(name = "image_errors")
-    public String imageErrors;
+    private String imageErrors;
 
     @Column(name = "validation_status")
     @Enumerated(EnumType.STRING)
-    public ProductImportValidationStatusEn validationStatus;
+    private ProductImportValidationStatusEn validationStatus;
 
-    @Column(name="has_changes")
-    public Boolean hasChanges;
+    @Column(name = "has_changes")
+    private Boolean hasChanges;
 
     // Current (live) values captured at import time for comparison
     @Column(name = "current_stock")
-    public Integer currentStock;
+    private Integer currentStock;
 
     @Column(name = "current_images")
-    public String currentImages;
+    private String currentImages;
 
     @Column(name = "current_attributes")
-    public String currentAttributes;
+    private String currentAttributes;
 
     @Column(name = "current_name")
-    public String currentName;
+    private String currentName;
 
     @Column(name = "current_description")
-    public String currentDescription;
+    private String currentDescription;
 
     @Column(name = "current_short_description")
-    public String currentShortDescription;
+    private String currentShortDescription;
 
-    public Boolean processed = false;
+    private Boolean processed = false;
 }

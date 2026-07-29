@@ -1,8 +1,14 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 import java.util.UUID;
 
-public class WishlistResponseDto {
-    public List<UUID> variantIds;
+@Getter
+@Setter
+public class WishlistResponseDto
+{
+    private List<UUID> variantIds;
 }

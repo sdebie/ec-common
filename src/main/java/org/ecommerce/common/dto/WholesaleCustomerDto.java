@@ -1,10 +1,15 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.ecommerce.common.enums.WholesaleCustomerStatusEn;
 
 import java.util.UUID;
 
-public class WholesaleCustomerDto {
+@Setter
+@Getter
+public class WholesaleCustomerDto
+{
     private UUID id;
     private String email;
     private String firstName;
@@ -36,94 +41,5 @@ public class WholesaleCustomerDto {
     private String financeContactPhone;
     private Boolean purchaseOrderRequired;
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-
-    public String getPhysicalAddressLine1() { return physicalAddressLine1; }
-    public void setPhysicalAddressLine1(String physicalAddressLine1) { this.physicalAddressLine1 = physicalAddressLine1; }
-
-    public String getPhysicalAddressLine2() { return physicalAddressLine2; }
-    public void setPhysicalAddressLine2(String physicalAddressLine2) { this.physicalAddressLine2 = physicalAddressLine2; }
-
-    public String getPhysicalSuburb() { return physicalSuburb; }
-    public void setPhysicalSuburb(String physicalSuburb) { this.physicalSuburb = physicalSuburb; }
-
-    public String getPhysicalCity() { return physicalCity; }
-    public void setPhysicalCity(String physicalCity) { this.physicalCity = physicalCity; }
-
-    public String getPhysicalProvince() { return physicalProvince; }
-    public void setPhysicalProvince(String physicalProvince) { this.physicalProvince = physicalProvince; }
-
-    public String getPhysicalPostalCode() { return physicalPostalCode; }
-    public void setPhysicalPostalCode(String physicalPostalCode) { this.physicalPostalCode = physicalPostalCode; }
-
-    public String getPostalAddressLine1() { return postalAddressLine1; }
-    public void setPostalAddressLine1(String postalAddressLine1) { this.postalAddressLine1 = postalAddressLine1; }
-
-    public String getPostalAddressLine2() { return postalAddressLine2; }
-    public void setPostalAddressLine2(String postalAddressLine2) { this.postalAddressLine2 = postalAddressLine2; }
-
-    public String getPostalSuburb() { return postalSuburb; }
-    public void setPostalSuburb(String postalSuburb) { this.postalSuburb = postalSuburb; }
-
-    public String getPostalCity() { return postalCity; }
-    public void setPostalCity(String postalCity) { this.postalCity = postalCity; }
-
-    public String getPostalProvince() { return postalProvince; }
-    public void setPostalProvince(String postalProvince) { this.postalProvince = postalProvince; }
-
-    public String getPostalPostalCode() { return postalPostalCode; }
-    public void setPostalPostalCode(String postalPostalCode) { this.postalPostalCode = postalPostalCode; }
-
-    public String getCompanyName() { return companyName; }
-    public void setCompanyName(String companyName) { this.companyName = companyName; }
-
-    public String getVatNumber() { return vatNumber; }
-    public void setVatNumber(String vatNumber) { this.vatNumber = vatNumber; }
-
-    public String getRegNumber() { return regNumber; }
-    public void setRegNumber(String regNumber) { this.regNumber = regNumber; }
-
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
-
-    public WholesaleCustomerStatusEn getStatus() { return status; }
-    public void setStatus(WholesaleCustomerStatusEn status) { this.status = status; }
-
-    public String getApplicantEmail() { return applicantEmail; }
-    public void setApplicantEmail(String applicantEmail) { this.applicantEmail = applicantEmail; }
-
-    public String getTradingName() { return tradingName; }
-    public void setTradingName(String tradingName) { this.tradingName = tradingName; }
-
-    public String getCompanyPhone() { return companyPhone; }
-    public void setCompanyPhone(String companyPhone) { this.companyPhone = companyPhone; }
-
-    public String getCompanyEmail() { return companyEmail; }
-    public void setCompanyEmail(String companyEmail) { this.companyEmail = companyEmail; }
-
-    public String getFinanceContactName() { return financeContactName; }
-    public void setFinanceContactName(String financeContactName) { this.financeContactName = financeContactName; }
-
-    public String getFinanceContactEmail() { return financeContactEmail; }
-    public void setFinanceContactEmail(String financeContactEmail) { this.financeContactEmail = financeContactEmail; }
-
-    public String getFinanceContactPhone() { return financeContactPhone; }
-    public void setFinanceContactPhone(String financeContactPhone) { this.financeContactPhone = financeContactPhone; }
-
-    public Boolean getPurchaseOrderRequired() { return purchaseOrderRequired; }
-    public void setPurchaseOrderRequired(Boolean purchaseOrderRequired) { this.purchaseOrderRequired = purchaseOrderRequired; }
 }
 

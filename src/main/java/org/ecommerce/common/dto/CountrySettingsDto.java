@@ -1,13 +1,18 @@
 package org.ecommerce.common.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class CountrySettingsDto {
-    public String countryCode;
-    public String countryName;
-    public String currencyCode;
-    public String locale;
-    public short decimalPlaces;
-    public boolean isDefault;
-    public boolean isActive;
+    private String countryCode;
+    private String countryName;
+    private String currencyCode;
+    private String locale;
+    private short decimalPlaces;
+    private boolean isDefault;
+    private boolean isActive;
 }
 
 
