@@ -55,7 +55,8 @@ jobs:
             echo "Stripping SNAPSHOT from project: $CURRENT_VERSION -> $RELEASE_VERSION"
           
             mvn -B versions:set -DnewVersion=${RELEASE_VERSION} -DgenerateBackupPoms=false
-            sed -i 's/-SNAPSHOT<\/ec-common.version>/<\/ec-common.version>/g' pom.xml
+            # 1. Strip SNAPSHOT from parent version (using a multiline sed or range)
+            sed -i '/<parent>/,/<\/parent>/s/-SNAPSHOT<\/version>/<\/version>/' pom.xml
           
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
