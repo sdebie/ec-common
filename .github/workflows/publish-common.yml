@@ -20,7 +20,7 @@ jobs:
     steps:
       # 1. Download the common library source code
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 2. Setup Java 21 with Maven dependency caching
       - name: Set up JDK 21
