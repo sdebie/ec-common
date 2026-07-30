@@ -14,7 +14,7 @@
 
     <groupId>org.ecommerce.common</groupId>
     <artifactId>ec-common</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
     <name>Ecommerce :: Common</name>
 
