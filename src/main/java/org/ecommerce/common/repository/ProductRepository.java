@@ -1,16 +1,11 @@
 package org.ecommerce.common.repository;
 
-import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.dto.PageResponse;
-import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.ProductEntity;
-import org.ecommerce.common.enums.OrderStatusEn;
-import org.ecommerce.common.enums.PriceTypeEn;
-import org.ecommerce.common.enums.ProductStatusEn;
+import org.ecommerce.common.enums.*;
 import org.ecommerce.common.query.*;
-import org.ecommerce.common.query.enums.SortDirection;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -52,22 +47,21 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 .firstResult();
     }
 
-    public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
+    public long countShoppingProducts(FilterRequest filterRequest, boolean onSale)
     {
         LocalDateTime now = LocalDateTime.now();
         List<PriceTypeEn> shoppingPriceTypes = onSale
                 ? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
                 : List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
         FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
+        ProductQueryBuilder queryBuilder = ProductQueryBuilder.fromProduct(normalizedFilterRequest, ProductEntity.class);
 
-        String hql = "select count(distinct p) from ProductEntity p " +
-                (hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
+        String hql = "select count(p) from ProductEntity p " +
                 "where exists (" +
                 "select 1 from ProductVariantEntity v " +
                 "join VariantPricesEntity vp on vp.variant = v " +
                 "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
+                "and v.status = :variantStatus " +
                 "and vp.priceType in :priceTypes " +
                 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
                 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
@@ -80,9 +74,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
         q.setParameter("priceTypes", shoppingPriceTypes);
         q.setParameter("now", now);
-        if (!ignoreStatus) {
-            q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
-        }
+        q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
         if (queryBuilder.hasParams()) {
             for (Map.Entry<String, Object> entry : queryBuilder.params().entrySet()) {
                 q.setParameter(entry.getKey(), entry.getValue());
@@ -93,47 +85,81 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return result != null ? result : 0L;
     }
 
-    public List<ProductEntity> findShoppingProductEntities(PageRequest pageRequest, FilterRequest filterRequest, boolean onSale, boolean ignoreStatus)
+    public List<ProductEntity> findShoppingProductEntities(PageRequest pageRequest, FilterRequest filterRequest,
+                                                           boolean onSale,
+                                                           CatalogueSortEn sortBy, PriceBasisEn priceBasis)
     {
         LocalDateTime now = LocalDateTime.now();
         List<PriceTypeEn> shoppingPriceTypes = onSale
                 ? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
                 : List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
         FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(normalizedFilterRequest, ProductEntity.class);
+        ProductQueryBuilder queryBuilder = ProductQueryBuilder.fromProduct(normalizedFilterRequest, ProductEntity.class);
 
-        String query = "select distinct p from ProductEntity p " +
-                "left join fetch p.categories " +
-                "left join fetch p.brand " +
-                (hasFiltersOnCategories(normalizedFilterRequest) ? "left join CategoryEntity category on category member of p.categories " : "") +
+        CatalogueSortEn effectiveSort = sortBy != null ? sortBy : CatalogueSortEn.NAME_ASC;
+        PriceBasisEn effectiveBasis = priceBasis != null ? priceBasis : PriceBasisEn.RETAIL;
+
+        // ─── Step 1: ID-selection query (paged, no collection fetch, no DISTINCT) ───
+        boolean needsSortKey = effectiveSort != CatalogueSortEn.NAME_ASC;
+
+        String sortKeyExpr = needsSortKey ? buildPriceSortKeyExpression(effectiveBasis) : null;
+
+        // Always select two columns so the result is consistently Object[]
+        String idQuery = "select p.id, " +
+                (needsSortKey ? sortKeyExpr + " as sortKey" : "p.name as sortKey") +
+                " from ProductEntity p " +
                 "where exists (" +
                 "select 1 from ProductVariantEntity v " +
                 "join VariantPricesEntity vp on vp.variant = v " +
                 "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
+                "and v.status = :variantStatus " +
                 "and vp.priceType in :priceTypes " +
                 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
                 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
                 ")";
 
         if (queryBuilder.hasQuery()) {
-            query += " AND " + queryBuilder.query();
+            idQuery += " AND " + queryBuilder.query();
         }
 
-        query += buildOrderByClause(normalizedFilterRequest != null ? normalizedFilterRequest.getSort() : null, "p");
+        // ORDER BY — price sorts use sortKey + tie-break; NAME_ASC uses name + id only
+        if (needsSortKey) {
+            String dir = effectiveSort == CatalogueSortEn.PRICE_DESC ? "DESC" : "ASC";
+            idQuery += " ORDER BY sortKey " + dir + " NULLS LAST, p.name ASC, p.id ASC";
+        } else {
+            idQuery += " ORDER BY p.name ASC, p.id ASC";
+        }
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("priceTypes", shoppingPriceTypes);
         params.put("now", now);
-        if (!ignoreStatus) {
-            params.put("variantStatus", ProductStatusEn.ACTIVE);
+        params.put("variantStatus", ProductStatusEn.ACTIVE);
+        if (needsSortKey) {
+            bindSortKeyParams(params, effectiveBasis, now);
         }
         if (queryBuilder.hasParams()) {
             params.putAll(queryBuilder.params());
         }
 
-        return find(query, params)
-                .page(queryBuilder.page(pageRequest)).list();
+        PageRequest effectivePage = pageRequest != null ? pageRequest : new PageRequest();
+        int pageIndex = effectivePage.getPageIndex();
+        int pageSize = effectivePage.getPageSize();
+
+        TypedQuery<Object[]> idTypedQuery = getEntityManager().createQuery(idQuery, Object[].class);
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            idTypedQuery.setParameter(entry.getKey(), entry.getValue());
+        }
+        idTypedQuery.setFirstResult(pageIndex * pageSize);
+        idTypedQuery.setMaxResults(pageSize);
+
+        List<Object[]> rows = idTypedQuery.getResultList();
+
+        List<UUID> ids = rows.stream()
+                .map(row -> (UUID) row[0])
+                .collect(Collectors.toList());
+
+        // ─── Step 2: hydration (unpaged, no DISTINCT) ───────────────────────────────
+        return fetchProductsByIds(ids);
     }
 
     public List<ProductEntity> findOnSaleProductEntities(PageRequest pageRequest, boolean ignoreStatus)
@@ -143,9 +169,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 PriceTypeEn.RETAIL_SALE_PRICE,
                 PriceTypeEn.WHOLESALE_SALE_PRICE);
 
-        String query = "select distinct p from ProductEntity p " +
-                "left join fetch p.categories " +
-                "left join fetch p.brand " +
+        // ─── Step 1: ID-selection query (paged, no collection fetch, no DISTINCT) ───
+        String idQuery = "select p.id from ProductEntity p " +
                 "where exists (" +
                 "select 1 from ProductVariantEntity v " +
                 "join VariantPricesEntity vp on vp.variant = v " +
@@ -155,7 +180,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
                 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
                 ") " +
-                "order by p.name asc";
+                "ORDER BY p.name ASC, p.id ASC";
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("priceTypes", salePriceTypes);
@@ -164,90 +189,99 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
             params.put("variantStatus", ProductStatusEn.ACTIVE);
         }
 
-        return find(query, params)
-                .page(Page.of(
-                        pageRequest != null ? pageRequest.getPageIndex() : 0,
-                        pageRequest != null ? pageRequest.getPageSize() : 10))
-                .list();
+        PageRequest effectivePage = pageRequest != null ? pageRequest : new PageRequest();
+        int pageIndex = effectivePage.getPageIndex();
+        int pageSize = effectivePage.getPageSize();
+
+        TypedQuery<UUID> idTypedQuery = getEntityManager().createQuery(idQuery, UUID.class);
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            idTypedQuery.setParameter(entry.getKey(), entry.getValue());
+        }
+        idTypedQuery.setFirstResult(pageIndex * pageSize);
+        idTypedQuery.setMaxResults(pageSize);
+
+        List<UUID> ids = idTypedQuery.getResultList();
+
+        // ─── Step 2: hydration (unpaged, no DISTINCT) ───────────────────────────────
+        return fetchProductsByIds(ids);
     }
 
 
+    // ─── Price Sort Key ───────────────────────────────────────────────────────────
+
     /**
-     * Builds a fully-qualified HQL ORDER BY clause using the given entity alias,
-     * preventing Hibernate's "Ambiguous unqualified attribute reference" error when
-     * joined entities share field names (e.g. both ProductEntity and CategoryEntity have 'name').
+     * Builds the HQL expression for the catalogue price sort key, parameterised by
+     * price basis. The expression computes:
+     * <pre>
+     *   COALESCE(
+     *     MIN(price) over active rows of the basis SALE tier,
+     *     MIN(price) over active rows of the basis BASE tier
+     *   )
+     * </pre>
      * <p>
-     * Unqualified fields (no dot) are automatically prefixed with {@code alias}.
-     * Navigation paths (e.g. {@code category.name}) are prefixed as {@code alias.category.name}.
-     * Falls back to {@code alias.name ASC} when no sort requests are present.
+     * "Active row" mirrors {@link VariantPricesRepository#findActiveForProductIds}:
+     * variant status = ACTIVE (unconditionally), price_start_date IS NULL OR ≤ :now,
+     * price_end_date IS NULL OR ≥ :now.
+     * <p>
+     * The returned fragment is a correlated subquery suitable for a SELECT list (aliased
+     * externally) or ORDER BY. The caller must bind the parameters returned by
+     * {@link #bindSortKeyParams(Map, PriceBasisEn, LocalDateTime)} on the same query.
+     *
+     * @param basis which price tier pair to use (RETAIL or WHOLESALE)
+     * @return the HQL fragment (no leading/trailing whitespace, no alias assignment)
      */
-    private String buildOrderByClause(List<SortRequest> sortRequests, String alias)
+    private String buildPriceSortKeyExpression(PriceBasisEn basis)
     {
-        if (sortRequests == null || sortRequests.isEmpty()) {
-            return " ORDER BY " + alias + ".name ASC";
-        }
-
-        List<String> parts = new ArrayList<>();
-        for (SortRequest s : sortRequests) {
-            if (s.getField() == null || s.getField().isBlank()) continue;
-            // Always prefix with the root alias so Hibernate knows which entity to sort by
-            String field = alias + "." + s.getField();
-            String dir = s.getDirection() == SortDirection.DESC ? "DESC" : "ASC";
-            parts.add(field + " " + dir);
-        }
-
-        return parts.isEmpty()
-                ? " ORDER BY " + alias + ".name ASC"
-                : " ORDER BY " + String.join(", ", parts);
+        // The two subqueries differ only in the price type parameter name; the
+        // activeness predicate is identical and unconditional (no ignoreStatus).
+        return "coalesce(" +
+                "(select min(vp1.price) from VariantPricesEntity vp1 " +
+                "join vp1.variant v1 " +
+                "where v1.product = p " +
+                "and v1.status = :variantStatus " +
+                "and vp1.priceType = :salePriceType " +
+                "and (vp1.priceStartDate is null or vp1.priceStartDate <= :now) " +
+                "and (vp1.priceEndDate is null or vp1.priceEndDate >= :now)), " +
+                "(select min(vp2.price) from VariantPricesEntity vp2 " +
+                "join vp2.variant v2 " +
+                "where v2.product = p " +
+                "and v2.status = :variantStatus " +
+                "and vp2.priceType = :basePriceType " +
+                "and (vp2.priceStartDate is null or vp2.priceStartDate <= :now) " +
+                "and (vp2.priceEndDate is null or vp2.priceEndDate >= :now))" +
+                ")";
     }
 
     /**
-     * Check if the filter request contains any filters on category fields
+     * Binds the parameters required by the sort-key expression produced by
+     * {@link #buildPriceSortKeyExpression(PriceBasisEn)} into the supplied parameter map.
+     * The caller must also ensure `:variantStatus` is bound (shared with the product
+     * active-variant exists-predicate).
+     * <p>
+     * Parameters bound: {@code :salePriceType}, {@code :basePriceType}, {@code :now},
+     * {@code :variantStatus}.
+     *
+     * @param params the mutable parameter map to populate
+     * @param basis  the price basis (determines which sale/base enum values are bound)
+     * @param now    the current timestamp for the active-window check
      */
-    private boolean hasFiltersOnCategories(FilterRequest filterRequest)
+    private void bindSortKeyParams(Map<String, Object> params, PriceBasisEn basis, LocalDateTime now)
     {
-        if (filterRequest == null) return false;
+        PriceTypeEn salePriceType;
+        PriceTypeEn basePriceType;
 
-        if (filterRequest.getFilters() != null) {
-            for (Filter f : filterRequest.getFilters()) {
-                if (f.getKey() != null && (f.getKey().startsWith("category") || f.getKey().startsWith("categories"))) {
-                    return true;
-                }
-            }
+        if (basis == PriceBasisEn.WHOLESALE) {
+            salePriceType = PriceTypeEn.WHOLESALE_SALE_PRICE;
+            basePriceType = PriceTypeEn.WHOLESALE_PRICE;
+        } else {
+            salePriceType = PriceTypeEn.RETAIL_SALE_PRICE;
+            basePriceType = PriceTypeEn.RETAIL_PRICE;
         }
 
-        if (filterRequest.getFilterGroups() != null) {
-            for (FilterGroup fg : filterRequest.getFilterGroups()) {
-                if (hasFiltersOnCategoriesInGroup(fg)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private boolean hasFiltersOnCategoriesInGroup(FilterGroup group)
-    {
-        if (group == null) return false;
-
-        if (group.getFilters() != null) {
-            for (Filter f : group.getFilters()) {
-                if (f.getKey() != null && (f.getKey().startsWith("category") || f.getKey().startsWith("categories"))) {
-                    return true;
-                }
-            }
-        }
-
-        if (group.getFilterGroups() != null) {
-            for (FilterGroup sub : group.getFilterGroups()) {
-                if (hasFiltersOnCategoriesInGroup(sub)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        params.put("salePriceType", salePriceType);
+        params.put("basePriceType", basePriceType);
+        params.put("now", now);
+        params.put("variantStatus", ProductStatusEn.ACTIVE);
     }
 
     private FilterRequest normalizeProductFilterRequest(FilterRequest filterRequest)
