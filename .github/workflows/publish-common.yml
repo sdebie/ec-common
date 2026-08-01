@@ -36,6 +36,11 @@ jobs:
           servers: |
             [
               {
+                "id": "github",
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
+              },
+              {
                 "id": "github-parent",
                 "username": "${{ github.actor }}",
                 "password": "${{ secrets.GITHUB_TOKEN }}"
@@ -49,7 +54,8 @@ jobs:
 
       - name: Strip SNAPSHOT from project version and properties
         run: |
-          CURRENT_VERSION=$(mvn -B help:evaluate -Dexpression=project.version -q -DforceStdout)
+          # Evaluates version without quiet mode to print errors if Maven fails
+          CURRENT_VERSION=$(mvn -B help:evaluate -Dexpression=project.version -DforceStdout | grep -v "\[INFO\]" | tail -n 1)
           
           if [[ "$CURRENT_VERSION" == *"-SNAPSHOT"* ]]; then
             RELEASE_VERSION=${CURRENT_VERSION%-SNAPSHOT}
@@ -58,18 +64,20 @@ jobs:
             # 1. Update main project version
             mvn -B versions:set -DnewVersion=${RELEASE_VERSION} -DgenerateBackupPoms=false
           
-            # 2. Strip SNAPSHOT from ec-common.version property
+            # 2. Strip SNAPSHOT from ec-common.version property if present
             sed -i 's/-SNAPSHOT<\/ec-common.version>/<\/ec-common.version>/g' pom.xml
           
-            # 3. Strip SNAPSHOT from parent version (using a multiline sed or range)
-            sed -i '/<parent>/,/<\/parent>/s/-SNAPSHOT<\/version>/<\/version>/' pom.xml
+            # 3. Strip SNAPSHOT from parent version if present
+            if grep -q "<parent>" pom.xml; then
+              sed -i '/<parent>/,/<\/parent>/s/-SNAPSHOT<\/version>/<\/version>/' pom.xml
+            fi
           
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
           
             if [[ -n $(git status --porcelain) ]]; then
               git commit -am "chore(release): set clean main release v${RELEASE_VERSION} [skip ci]"
-              git tag "v${RELEASE_VERSION}"
+              git tag -f "v${RELEASE_VERSION}"
               git push origin main --tags
             else
               echo "No files were changed. Skipping commit."
@@ -92,7 +100,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
-          ref: main # Pull the freshly committed clean release version
+          ref: main
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -107,12 +115,12 @@ jobs:
           servers: |
             [
               {
-                "id": "github-parent",
+                "id": "github",
                 "username": "${{ github.actor }}",
                 "password": "${{ secrets.GITHUB_TOKEN }}"
               },
               {
-                "id": "github",
+                "id": "github-parent",
                 "username": "${{ github.actor }}",
                 "password": "${{ secrets.GITHUB_TOKEN }}"
               }
