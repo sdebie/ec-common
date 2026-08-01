@@ -69,15 +69,11 @@
     <repositories>
         <repository>
             <id>github-parent</id>
-            <name>GitHub Packages Parent</name>
+            <name>GitHub Packages</name>
             <url>https://maven.pkg.github.com/sdebie/ec-parent</url>
             <snapshots>
                 <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
             </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
         </repository>
     </repositories>
 
