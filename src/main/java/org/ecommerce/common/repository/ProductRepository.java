@@ -47,7 +47,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 .firstResult();
     }
 
-    public long countShoppingProducts(FilterRequest filterRequest, boolean onSale)
+    public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, Boolean inStockOnly)
     {
         LocalDateTime now = LocalDateTime.now();
         List<PriceTypeEn> shoppingPriceTypes = onSale
@@ -66,6 +66,13 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
                 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
                 ")";
+
+        if (Boolean.TRUE.equals(inStockOnly)) {
+            hql += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
+                    "WHERE sv.product = p " +
+                    "AND sv.status = :variantStatus " +
+                    "AND sv.stockQuantity > 0)";
+        }
 
         if (queryBuilder.hasQuery()) {
             hql += " AND " + queryBuilder.query();
@@ -87,7 +94,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
     public List<ProductEntity> findShoppingProductEntities(PageRequest pageRequest, FilterRequest filterRequest,
                                                            boolean onSale,
-                                                           CatalogueSortEn sortBy, PriceBasisEn priceBasis)
+                                                           CatalogueSortEn sortBy, PriceBasisEn priceBasis,
+                                                           Boolean inStockOnly)
     {
         LocalDateTime now = LocalDateTime.now();
         List<PriceTypeEn> shoppingPriceTypes = onSale
@@ -117,6 +125,13 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
                 "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
                 ")";
+
+        if (Boolean.TRUE.equals(inStockOnly)) {
+            idQuery += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
+                    "WHERE sv.product = p " +
+                    "AND sv.status = :variantStatus " +
+                    "AND sv.stockQuantity > 0)";
+        }
 
         if (queryBuilder.hasQuery()) {
             idQuery += " AND " + queryBuilder.query();

@@ -42,6 +42,12 @@ public class ProductShoppingListItemDto
     @Description("Product images including featured flag")
     private List<ProductImageDto> images;
 
+    @Description("Variant SKU for SIMPLE products; null for non-SIMPLE products")
+    private String sku;
+
+    @Description("True when any variant in this response's variant set has stock quantity > 0")
+    private Boolean inStock;
+
     @Description("Lowest active retail price in the current window with oldest start date")
     private VariantPriceDto retailPrice;
 
