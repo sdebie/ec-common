@@ -44,7 +44,7 @@ public class PanacheQueryBuilder
         return new PanacheQueryBuilder(filterRequest, entityClass).build();
     }
 
-    private PanacheQueryBuilder build()
+    protected PanacheQueryBuilder build()
     {
         // 1. Flat top-level filters (AND-ed together)
         if (filterRequest.getFilters() != null) {
@@ -97,13 +97,11 @@ public class PanacheQueryBuilder
     /**
      * Prevent JPQL injection — only alphanumerics, underscores, and dots allowed.
      * Dot notation supports JOIN navigation (e.g. "address.city").
+     * Delegates to the shared {@link FieldNameValidator} so the rule has one definition.
      */
     private String sanitize(String field)
     {
-        if (!field.matches("[\\w.]+")) {
-            throw new IllegalArgumentException("Invalid field name: '" + field + "'");
-        }
-        return field;
+        return FieldNameValidator.validate(field);
     }
 
     private String buildGroup(FilterGroup filterGroup)
@@ -132,7 +130,7 @@ public class PanacheQueryBuilder
         return parts.size() == 1 ? parts.getFirst() : "(" + String.join(joiner, parts) + ")";
     }
 
-    private String buildFilter(Filter filter)
+    protected String buildFilter(Filter filter)
     {
         if (filter == null || filter.getKey() == null || filter.getKey().isBlank()) {
             return null;
