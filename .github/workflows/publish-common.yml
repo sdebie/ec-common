@@ -49,42 +49,28 @@ jobs:
 
       - name: Strip SNAPSHOT from project version and properties
         run: |
-          # 1. Evaluate current version (print verbose logs if Maven fails)
-          CURRENT_VERSION=$(mvn -B help:evaluate -Dexpression=project.version -q -DforceStdout) || {
-            echo "❌ Maven help:evaluate failed! Running without quiet mode to reveal details:"
-            mvn -B help:evaluate -Dexpression=project.version -DforceStdout
-            exit 1
-          }
-          
-          echo "Current project version is: '$CURRENT_VERSION'"
+          CURRENT_VERSION=$(mvn -B help:evaluate -Dexpression=project.version -q -DforceStdout)
           
           if [[ "$CURRENT_VERSION" == *"-SNAPSHOT"* ]]; then
             RELEASE_VERSION=${CURRENT_VERSION%-SNAPSHOT}
             echo "Stripping SNAPSHOT from project: $CURRENT_VERSION -> $RELEASE_VERSION"
           
-            # 2. Set main module release version
+            # 1. Update main project version
             mvn -B versions:set -DnewVersion=${RELEASE_VERSION} -DgenerateBackupPoms=false
           
-            # 3. Strip SNAPSHOT from parent version if present
-            if grep -q "<parent>" pom.xml; then
-              sed -i '/<parent>/,/<\/parent>/s/-SNAPSHOT<\/version>/<\/version>/' pom.xml
-            fi
+            # 2. Strip SNAPSHOT from ec-common.version property
+            sed -i 's/-SNAPSHOT<\/ec-common.version>/<\/ec-common.version>/g' pom.xml
+          
+            # 3. Strip SNAPSHOT from parent version (using a multiline sed or range)
+            sed -i '/<parent>/,/<\/parent>/s/-SNAPSHOT<\/version>/<\/version>/' pom.xml
           
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
           
             if [[ -n $(git status --porcelain) ]]; then
-              # Ensure runner is aligned with main branch
-              git checkout -B main
-          
               git commit -am "chore(release): set clean main release v${RELEASE_VERSION} [skip ci]"
-          
-              # Force overwrite local tag
-              git tag -f "v${RELEASE_VERSION}"
-          
-              # Push HEAD directly to remote refs/heads/main and push tag
-              git push origin HEAD:refs/heads/main
-              git push origin "v${RELEASE_VERSION}" --force
+              git tag "v${RELEASE_VERSION}"
+              git push origin main --tags
             else
               echo "No files were changed. Skipping commit."
             fi
