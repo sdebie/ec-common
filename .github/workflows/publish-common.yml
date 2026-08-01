@@ -54,36 +54,32 @@ jobs:
 
       - name: Strip SNAPSHOT from project version and properties
         run: |
-          # Evaluates version without quiet mode to print errors if Maven fails
-          CURRENT_VERSION=$(mvn -B help:evaluate -Dexpression=project.version -DforceStdout | grep -v "\[INFO\]" | tail -n 1)
+          echo "Processing pom.xml for SNAPSHOT cleanup..."
           
-          if [[ "$CURRENT_VERSION" == *"-SNAPSHOT"* ]]; then
-            RELEASE_VERSION=${CURRENT_VERSION%-SNAPSHOT}
-            echo "Stripping SNAPSHOT from project: $CURRENT_VERSION -> $RELEASE_VERSION"
+          # 1. Direct text replacement: strip -SNAPSHOT anywhere it appears in pom.xml
+          sed -i 's/-SNAPSHOT<\/version>/<\/version>/g' pom.xml
+          sed -i 's/-SNAPSHOT<\/ec-common.version>/<\/ec-common.version>/g' pom.xml
           
-            # 1. Update main project version
-            mvn -B versions:set -DnewVersion=${RELEASE_VERSION} -DgenerateBackupPoms=false
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
-            # 2. Strip SNAPSHOT from ec-common.version property if present
-            sed -i 's/-SNAPSHOT<\/ec-common.version>/<\/ec-common.version>/g' pom.xml
+          # 2. Check if pom.xml was modified by sed
+          if [[ -n $(git status --porcelain pom.xml) ]]; then
+            # Extract the new clean version using grep/sed directly from pom.xml
+            CLEAN_VERSION=$(grep -m 1 '<version>' pom.xml | sed -n 's/.*<version>\(.*\)<\/version>.*/\1/p' | xargs)
           
-            # 3. Strip SNAPSHOT from parent version if present
-            if grep -q "<parent>" pom.xml; then
-              sed -i '/<parent>/,/<\/parent>/s/-SNAPSHOT<\/version>/<\/version>/' pom.xml
-            fi
+            echo "Stripped SNAPSHOTs! New release version: ${CLEAN_VERSION}"
           
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B main
+            git commit -am "chore(release): set clean main release v${CLEAN_VERSION} [skip ci]"
           
-            if [[ -n $(git status --porcelain) ]]; then
-              git commit -am "chore(release): set clean main release v${RELEASE_VERSION} [skip ci]"
-              git tag -f "v${RELEASE_VERSION}"
-              git push origin main --tags
-            else
-              echo "No files were changed. Skipping commit."
-            fi
+            # Force overwrite tag if it already exists
+            git tag -f "v${CLEAN_VERSION}"
+          
+            git push origin HEAD:refs/heads/main
+            git push origin "v${CLEAN_VERSION}" --force
           else
-            echo "Main branch is already on clean version ($CURRENT_VERSION). No action needed."
+            echo "No -SNAPSHOT strings found in pom.xml. Repository is already clean."
           fi
 
   # Job 2: Runs strictly AFTER strip-snapshot succeeds
@@ -121,6 +117,11 @@ jobs:
               },
               {
                 "id": "github-parent",
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
+              },
+              {
+                "id": "github-common",
                 "username": "${{ github.actor }}",
                 "password": "${{ secrets.GITHUB_TOKEN }}"
               }
