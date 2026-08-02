@@ -24,4 +24,6 @@ public class WishlistHydratedItemDto
     private VariantPriceDto wholesalePrice;
     private VariantPriceDto retailSalePrice;
     private VariantPriceDto wholesaleSalePrice;
+    private Boolean inStock;
+    private Boolean productActive;
 }
