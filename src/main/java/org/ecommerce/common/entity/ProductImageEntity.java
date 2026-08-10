@@ -37,4 +37,7 @@ public class ProductImageEntity extends PanacheEntityBase
 
     @Column(name = "is_featured")
     private Boolean isFeatured;
+
+    @Column(name = "alt_text")
+    private String altText;
 }
