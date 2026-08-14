@@ -3,7 +3,6 @@ package org.ecommerce.common.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.CategoryEntity;
 
-import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -29,12 +28,6 @@ public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
             return null;
         }
         return find("id = ?1 and parent is null", id).firstResult();
-    }
-
-    // returns all the subcategories
-    public List<CategoryEntity> findSubCategoriesByParentId(Long parentId)
-    {
-        return list("parent.id", parentId);
     }
 
     public CategoryEntity findByNameExcludingId(String name, UUID excludeId)
