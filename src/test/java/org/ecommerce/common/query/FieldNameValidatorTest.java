@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Unit tests for {@link FieldNameValidator} — the shared field-name sanitizer
  * that guards both PanacheQueryBuilder and buildOrderByClause against injection.
  *
- * Validates: Requirements 10.4
  */
 class FieldNameValidatorTest
 {
