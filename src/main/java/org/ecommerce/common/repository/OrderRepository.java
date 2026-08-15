@@ -1,14 +1,17 @@
 package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.entity.OrderEntity;
 import org.ecommerce.common.entity.OrderItemEntity;
 import org.ecommerce.common.entity.ProductVariantEntity;
+import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
 import org.ecommerce.common.query.enums.SortDirection;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @ApplicationScoped
@@ -107,6 +110,98 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         return hydratedOrders;
+    }
+
+    /**
+     * One page of orders for the admin list, newest first, hydrated with the
+     * customer and line items the list row needs.
+     * <p>
+     * Hand-written rather than routed through {@link FilterRequest}: that path
+     * coerces a filter value to boolean/UUID/Long/Double/String only, so a
+     * {@code createdAt} bound would bind a String against a timestamp column
+     * and fail. The date range is the whole point of this query.
+     *
+     * @param from inclusive lower bound, or null for no lower bound
+     * @param to   exclusive upper bound, or null for no upper bound
+     */
+    public List<OrderEntity> findForAdmin(OrderStatusEn status, LocalDateTime from, LocalDateTime to, PageRequest pageRequest)
+    {
+        PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
+        Map<String, Object> params = new LinkedHashMap<>();
+        String where = adminWhereClause(status, from, to, params);
+
+        // Page over ids alone. A bag fetch of o.items cannot be paged in SQL, so
+        // combining the fetch with setMaxResults would make Hibernate page in
+        // memory over the entire result set.
+        TypedQuery<UUID> idQuery = getEntityManager()
+                .createQuery("select o.id from OrderEntity o" + where + " order by o.createdAt desc", UUID.class)
+                .setFirstResult(page.getOffset())
+                .setMaxResults(page.getPageSize());
+        params.forEach(idQuery::setParameter);
+
+        List<UUID> ids = idQuery.getResultList();
+        if (ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<OrderEntity> hydrated = getEntityManager()
+                .createQuery("select distinct o from OrderEntity o "
+                        + "left join fetch o.customerEntity "
+                        + "left join fetch o.items "
+                        + "where o.id in :ids", OrderEntity.class)
+                .setParameter("ids", ids)
+                .getResultList();
+
+        // An IN-clause does not preserve the id order, so re-impose the page's.
+        Map<UUID, OrderEntity> byId = new LinkedHashMap<>();
+        for (OrderEntity order : hydrated) {
+            byId.put(order.getId(), order);
+        }
+
+        List<OrderEntity> ordered = new ArrayList<>(ids.size());
+        for (UUID id : ids) {
+            OrderEntity order = byId.get(id);
+            if (order != null) {
+                ordered.add(order);
+            }
+        }
+        return ordered;
+    }
+
+    /**
+     * Total matching {@link #findForAdmin} under the same filters, for paging.
+     */
+    public long countForAdmin(OrderStatusEn status, LocalDateTime from, LocalDateTime to)
+    {
+        Map<String, Object> params = new LinkedHashMap<>();
+        String where = adminWhereClause(status, from, to, params);
+
+        TypedQuery<Long> query = getEntityManager()
+                .createQuery("select count(o.id) from OrderEntity o" + where, Long.class);
+        params.forEach(query::setParameter);
+
+        return query.getSingleResult();
+    }
+
+    /** Builds the shared WHERE clause and fills {@code params} with its bindings. */
+    private String adminWhereClause(OrderStatusEn status, LocalDateTime from, LocalDateTime to, Map<String, Object> params)
+    {
+        List<String> clauses = new ArrayList<>();
+
+        if (status != null) {
+            clauses.add("o.status = :status");
+            params.put("status", status);
+        }
+        if (from != null) {
+            clauses.add("o.createdAt >= :from");
+            params.put("from", from);
+        }
+        if (to != null) {
+            clauses.add("o.createdAt < :to");
+            params.put("to", to);
+        }
+
+        return clauses.isEmpty() ? "" : " where " + String.join(" and ", clauses);
     }
 
     private FilterRequest withDefaultCreatedAtSort(FilterRequest filterRequest)

@@ -76,6 +76,39 @@ public class OrderEntity extends PanacheEntityBase
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * The human-facing order reference shown to staff and customers. Derived
+     * from the id rather than stored, so it needs no sequence, no extra column
+     * and no backfill, and is stable for the life of the order.
+     */
+    public String getReference()
+    {
+        return id == null ? null : "ORD-" + id.toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * Display name for whoever placed the order. A guest checkout has no
+     * customer record, so the contact details captured at checkout are the
+     * only name that exists — the same fallback order the confirmation mailer
+     * uses.
+     */
+    public String getPlacedByName()
+    {
+        if (customerEntity != null) {
+            String name = join(customerEntity.getFirstName(), customerEntity.getLastName());
+            if (name != null) {
+                return name;
+            }
+        }
+        return join(contactFirstName, contactLastName);
+    }
+
+    private static String join(String first, String last)
+    {
+        String joined = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
+        return joined.isEmpty() ? null : joined;
+    }
+
     // Finder methods to return fully-hydrated orders (customer + order_items)
     public static OrderEntity findOrderInfoById(UUID id)
     {
