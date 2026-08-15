@@ -124,11 +124,11 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
      * @param from inclusive lower bound, or null for no lower bound
      * @param to   exclusive upper bound, or null for no upper bound
      */
-    public List<OrderEntity> findForAdmin(OrderStatusEn status, LocalDateTime from, LocalDateTime to, PageRequest pageRequest)
+    public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, PageRequest pageRequest)
     {
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
         Map<String, Object> params = new LinkedHashMap<>();
-        String where = adminWhereClause(status, from, to, params);
+        String where = adminWhereClause(statuses, from, to, params);
 
         // Page over ids alone. A bag fetch of o.items cannot be paged in SQL, so
         // combining the fetch with setMaxResults would make Hibernate page in
@@ -171,10 +171,10 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
     /**
      * Total matching {@link #findForAdmin} under the same filters, for paging.
      */
-    public long countForAdmin(OrderStatusEn status, LocalDateTime from, LocalDateTime to)
+    public long countForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to)
     {
         Map<String, Object> params = new LinkedHashMap<>();
-        String where = adminWhereClause(status, from, to, params);
+        String where = adminWhereClause(statuses, from, to, params);
 
         TypedQuery<Long> query = getEntityManager()
                 .createQuery("select count(o.id) from OrderEntity o" + where, Long.class);
@@ -183,14 +183,21 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return query.getSingleResult();
     }
 
-    /** Builds the shared WHERE clause and fills {@code params} with its bindings. */
-    private String adminWhereClause(OrderStatusEn status, LocalDateTime from, LocalDateTime to, Map<String, Object> params)
+    /**
+     * Builds the shared WHERE clause and fills {@code params} with its bindings.
+     *
+     * @param statuses the statuses to match, or null for every status. An <em>empty</em>
+     *                 collection is not the same thing: it means the caller's filters
+     *                 admit nothing, and callers short-circuit on it rather than passing
+     *                 it here, since {@code in ()} is not valid SQL.
+     */
+    private String adminWhereClause(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, Map<String, Object> params)
     {
         List<String> clauses = new ArrayList<>();
 
-        if (status != null) {
-            clauses.add("o.status = :status");
-            params.put("status", status);
+        if (statuses != null && !statuses.isEmpty()) {
+            clauses.add("o.status in :statuses");
+            params.put("statuses", statuses);
         }
         if (from != null) {
             clauses.add("o.createdAt >= :from");

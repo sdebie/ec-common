@@ -225,6 +225,64 @@ public enum OrderStatusEn {
     }
 
     /**
+     * Where this order's money is.
+     * <p>
+     * One status answers two questions staff ask separately — has the money arrived, and
+     * where are the goods — so each is derived as its own facet. Exhaustive by constant:
+     * a new status must answer both before it compiles.
+     *
+     * @see PaymentState
+     */
+    public PaymentState paymentState()
+    {
+        return switch (this) {
+            case CREATED, PENDING_PAYMENT, IN_STORE_PAYMENT, PENDING -> PaymentState.AWAITING;
+            case PAYMENT_FAILED -> PaymentState.FAILED;
+
+            // Received and still held: everything from payment through to the goods
+            // arriving, including a delivery that went wrong — the money did not move back
+            // just because the parcel did.
+            case PAID, PROCESSING, READY_TO_SHIP, READY_FOR_COLLECTION, IN_TRANSIT,
+                 DELIVERY_FAILED, RETURNED_TO_ORIGIN, DELIVERED, COLLECTED -> PaymentState.PAID;
+
+            case PARTIALLY_REFUNDED -> PaymentState.PARTIALLY_REFUNDED;
+            case REFUNDED -> PaymentState.REFUNDED;
+
+            // A cancellation records that the order is over, not what it was when it
+            // ended, so this says only that — never that it was or was not paid.
+            case USER_CANCELED, ADMIN_CANCELED, SYSTEM_CANCELED, FAILED, CANCELLED -> PaymentState.CANCELLED;
+        };
+    }
+
+    /**
+     * Where this order's goods are.
+     * <p>
+     * Exhaustive by constant, for the same reason as {@link #paymentState()}.
+     *
+     * @see FulfilmentState
+     */
+    public FulfilmentState fulfilmentState()
+    {
+        return switch (this) {
+            // PAID belongs here: paying does not pick anything, and "paid but not started"
+            // is the queue staff work from.
+            case CREATED, PENDING_PAYMENT, IN_STORE_PAYMENT, PAYMENT_FAILED, PAID, PENDING
+                    -> FulfilmentState.NOT_STARTED;
+
+            case PROCESSING -> FulfilmentState.PROCESSING;
+            case READY_TO_SHIP, READY_FOR_COLLECTION -> FulfilmentState.READY;
+            case IN_TRANSIT -> FulfilmentState.IN_TRANSIT;
+            case DELIVERY_FAILED, RETURNED_TO_ORIGIN -> FulfilmentState.PROBLEM;
+
+            // Finished, not necessarily successful. A refund is only reachable once
+            // fulfilment is over, so it reports the same whichever way that ended.
+            case DELIVERED, COLLECTED, PARTIALLY_REFUNDED, REFUNDED -> FulfilmentState.COMPLETED;
+
+            case USER_CANCELED, ADMIN_CANCELED, SYSTEM_CANCELED, FAILED, CANCELLED -> FulfilmentState.CANCELLED;
+        };
+    }
+
+    /**
      * Whether an order in this status still holds goods that have not left the shop.
      * This is what makes cancellation safe to restock unconditionally.
      * <p>
