@@ -182,6 +182,49 @@ public enum OrderStatusEn {
     }
 
     /**
+     * The email the shopper receives when their order reaches this status.
+     * <p>
+     * Exhaustive by constant, so adding a status will not compile until someone decides
+     * whether it is worth telling the shopper about. Silence is a legitimate answer and
+     * four statuses take it — but it has to be chosen, not inherited.
+     * <p>
+     * The silent ones are silent on purpose. CREATED comes before payment, and emailing
+     * there means confirming orders that then fail or time out. PROCESSING and
+     * READY_TO_SHIP are warehouse steps a shopper assumes are happening. FAILED is too
+     * vague to send: the cases a shopper can act on have their own statuses, and a bare
+     * "something went wrong" only causes alarm and support tickets.
+     *
+     * @see CustomerNotification
+     */
+    public CustomerNotification customerNotification()
+    {
+        return switch (this) {
+            // Waiting on the shopper. PAYMENT_FAILED is here rather than under a failure
+            // heading because it is recoverable: they can retry, and their stock is still
+            // held for them while they do.
+            case PENDING_PAYMENT, IN_STORE_PAYMENT, PAYMENT_FAILED -> CustomerNotification.ACTION_REQUIRED;
+
+            case PAID -> CustomerNotification.CONFIRMED;
+            case READY_FOR_COLLECTION -> CustomerNotification.READY_FOR_COLLECTION;
+            case IN_TRANSIT -> CustomerNotification.IN_TRANSIT;
+            case DELIVERED, COLLECTED -> CustomerNotification.COMPLETED;
+            case DELIVERY_FAILED, RETURNED_TO_ORIGIN -> CustomerNotification.DELIVERY_PROBLEM;
+
+            // However an order ended, the shopper needs the same thing: confirmation that
+            // it is over. Which side ended it belongs on the timeline, not in their inbox —
+            // and that is exactly why FAILED belongs here too. It is too vague a word to
+            // put in front of a shopper, but an order that ends in it has still ended, and
+            // silence would leave them waiting for something that is never coming. They get
+            // the same plain "cancelled, and refunded if you paid" as any other ending.
+            case USER_CANCELED, ADMIN_CANCELED, SYSTEM_CANCELED, CANCELLED, FAILED -> CustomerNotification.ENDED;
+
+            case REFUNDED, PARTIALLY_REFUNDED -> CustomerNotification.REFUNDED;
+
+            case CREATED, PROCESSING, READY_TO_SHIP, PENDING -> CustomerNotification.NONE;
+        };
+    }
+
+    /**
      * Whether an order in this status still holds goods that have not left the shop.
      * This is what makes cancellation safe to restock unconditionally.
      * <p>

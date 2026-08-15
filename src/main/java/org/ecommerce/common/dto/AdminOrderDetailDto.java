@@ -32,6 +32,11 @@ public class AdminOrderDetailDto
     private String status;
 
     private AdminOrderAddressDto shippingAddress;
+
+    /** Courier details, present once the order has been marked shipped. */
+    private String trackingNumber;
+    private String trackingCarrier;
+
     private List<AdminOrderLineItemDto> lineItems = new ArrayList<>();
 
     private BigDecimal subtotal;

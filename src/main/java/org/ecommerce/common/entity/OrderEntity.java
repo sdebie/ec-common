@@ -69,6 +69,17 @@ public class OrderEntity extends PanacheEntityBase
     @Column(name = "postal_code")
     private String postalCode;
 
+    /**
+     * Courier tracking, recorded when the order is marked IN_TRANSIT. Null until then,
+     * and always null for a collection order. The in-transit notification exists to hand
+     * the shopper this reference — without it that email can only say "on its way".
+     */
+    @Column(name = "tracking_number")
+    private String trackingNumber;
+
+    @Column(name = "tracking_carrier")
+    private String trackingCarrier;
+
     @OneToMany(mappedBy = "orderEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemEntity> items = new ArrayList<>();
 
