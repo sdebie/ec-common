@@ -30,10 +30,12 @@ public enum OrderStatusEn {
      * CREATED must go back. Admitting CANCELLED from a post-dispatch status
      * would break that, since the goods would already be gone.
      * <p>
-     * REFUNDED is a bookkeeping marker: it records that a refund was made
-     * outside the system. It moves no money — there is no gateway refund
-     * integration — and does not restore stock, which is why a refunded
-     * pre-dispatch order needs its stock corrected by hand.
+     * REFUNDED moves no money — there is no gateway refund integration, so it
+     * records a refund made outside the system. It is reachable from both
+     * sides of dispatch, so unlike CANCELLED it cannot infer what became of
+     * the goods: whether its items return to stock is supplied by the staff
+     * member issuing it, defaulted from {@link #isPreDispatch()} and never
+     * decided from status alone.
      * <p>
      * CREATED accepts IN_STORE_PAYMENT because a staff member marking an
      * unpaid order as payable in store is the only thing that ever sets that
@@ -53,5 +55,27 @@ public enum OrderStatusEn {
     public boolean canTransitionTo(OrderStatusEn target)
     {
         return target != null && allowedTransitions().contains(target);
+    }
+
+    /**
+     * Whether an order in this status still holds goods that have not left.
+     * <p>
+     * This is the <em>default</em> offered to a staff member deciding whether a
+     * refund returns its items to stock — never the server's authority. Status
+     * lags physical reality: an order dispatched without being moved to
+     * IN_TRANSIT still reads PAID, and inferring from that would return stock
+     * for goods already gone, overstating what is available to sell. Only the
+     * person issuing the refund knows, so they are asked and their answer is
+     * obeyed. Do not collapse this into an inference at the transition.
+     * <p>
+     * Exhaustive by constant rather than by a default branch, so adding a status
+     * forces this question to be answered for it.
+     */
+    public boolean isPreDispatch()
+    {
+        return switch (this) {
+            case CREATED, PENDING, PAID, IN_STORE_PAYMENT -> true;
+            case IN_TRANSIT, DELIVERED, CANCELLED, FAILED, SYSTEM_CANCELED, REFUNDED -> false;
+        };
     }
 }
