@@ -61,4 +61,28 @@ class OrderStatusEnPreDispatchTest
             }
         }
     }
+
+    /**
+     * The other half of the drift tripwire for a rule that exists in two languages.
+     * <p>
+     * The frontend's {@code defaultRestockForStatus} asserts this identical equivalence
+     * against {@code getAvailableTransitions}, which mirrors {@link
+     * OrderStatusEn#allowedTransitions()}. Pinning each side to its own transition map
+     * means the pre-dispatch rule cannot be changed on one side alone without a test
+     * failing somewhere.
+     * <p>
+     * If pre-dispatch and cancellable ever genuinely need to differ, this failing is the
+     * signal to build a real cross-language sync for the refund default — not to relax
+     * the assertion.
+     */
+    @Test
+    @DisplayName("pre-dispatch is exactly the set of statuses that admit CANCELLED, in both directions")
+    void isPreDispatch_matchesCancellability()
+    {
+        for (OrderStatusEn status : OrderStatusEn.values()) {
+            assertEquals(status.canTransitionTo(OrderStatusEn.CANCELLED), status.isPreDispatch(),
+                    status + " disagrees between isPreDispatch() and its CANCELLED transition; the frontend "
+                            + "refund default is pinned to the same equivalence and would now diverge");
+        }
+    }
 }
