@@ -44,4 +44,10 @@ public class PageContentEntity extends PanacheEntityBase {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    /** True when the draft has moved ahead of what readers currently see. */
+    public boolean hasUnpublishedChanges()
+    {
+        return !java.util.Objects.equals(draftContent, publishedContent);
+    }
 }

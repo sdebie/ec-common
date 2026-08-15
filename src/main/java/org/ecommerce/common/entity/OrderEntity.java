@@ -126,4 +126,37 @@ public class OrderEntity extends PanacheEntityBase
                 .firstResult();
     }
 
+
+    /**
+     * Total units on the order, not the number of distinct lines. Staff read this as
+     * "how many things am I picking", so a line of quantity 3 counts as 3.
+     */
+    public int totalUnits()
+    {
+        if (items == null) {
+            return 0;
+        }
+        int count = 0;
+        for (OrderItemEntity item : items) {
+            if (item != null && item.getQuantity() != null) {
+                count += item.getQuantity();
+            }
+        }
+        return count;
+    }
+
+    /**
+     * An address that reaches whoever placed this order: the account email when the order
+     * belongs to a signed-in customer, otherwise the checkout contact a guest supplied.
+     */
+    public String reachableEmail()
+    {
+        if (customerEntity != null && customerEntity.getUser() != null) {
+            String email = customerEntity.getUser().getEmail();
+            if (email != null && !email.isBlank()) {
+                return email;
+            }
+        }
+        return contactEmail;
+    }
 }

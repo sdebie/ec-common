@@ -4,6 +4,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.ecommerce.common.enums.AddressTypeEn;
 import org.ecommerce.common.enums.CustomerStatusEn;
 import org.ecommerce.common.enums.CustomerTypeEn;
 import org.hibernate.annotations.UuidGenerator;
@@ -77,4 +78,30 @@ public class CustomerEntity extends PanacheEntityBase
         return find("lower(user.email) = lower(?1)", email).firstResult();
     }
 
+
+    /**
+     * The customer's physical address, or null when none has been captured.
+     * A customer holds typed address rows; flat views read through these.
+     */
+    public CustomerAddressEntity getPhysicalAddress()
+    {
+        return addressOfType(AddressTypeEn.PHYSICAL);
+    }
+
+    /** The customer's postal address, or null when none has been captured. */
+    public CustomerAddressEntity getPostalAddress()
+    {
+        return addressOfType(AddressTypeEn.POSTAL);
+    }
+
+    private CustomerAddressEntity addressOfType(AddressTypeEn type)
+    {
+        if (addresses == null) {
+            return null;
+        }
+        return addresses.stream()
+                .filter(a -> a != null && a.getAddressType() == type)
+                .findFirst()
+                .orElse(null);
+    }
 }
