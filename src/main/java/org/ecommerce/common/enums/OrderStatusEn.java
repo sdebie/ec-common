@@ -24,9 +24,16 @@ public enum OrderStatusEn {
      * mirrors it exactly so the actions it offers are the actions the server
      * will accept.
      * <p>
+     * CANCELLED restores the order's stock. It is deliberately reachable only
+     * from pre-dispatch statuses — IN_TRANSIT leads to DELIVERED alone — so a
+     * cancelled order's goods have never left, and the stock consumed at
+     * CREATED must go back. Admitting CANCELLED from a post-dispatch status
+     * would break that, since the goods would already be gone.
+     * <p>
      * REFUNDED is a bookkeeping marker: it records that a refund was made
      * outside the system. It moves no money — there is no gateway refund
-     * integration — and does not restore stock.
+     * integration — and does not restore stock, which is why a refunded
+     * pre-dispatch order needs its stock corrected by hand.
      * <p>
      * CREATED accepts IN_STORE_PAYMENT because a staff member marking an
      * unpaid order as payable in store is the only thing that ever sets that
