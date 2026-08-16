@@ -6,6 +6,7 @@ import org.ecommerce.common.entity.OrderEntity;
 import org.ecommerce.common.entity.OrderItemEntity;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
+import org.ecommerce.common.query.FieldNameValidator;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
@@ -113,18 +114,34 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
     }
 
     /**
-     * One page of orders for the admin list, newest first, hydrated with the
-     * customer and line items the list row needs.
+     * The columns an admin can sort the order list by. Every other row field — reference,
+     * the placed-by name, item count — is derived rather than stored ({@link OrderEntity}'s
+     * own {@code getReference()}/{@code getPlacedByName()}/{@code totalUnits()}), so there is
+     * no single JPQL property an ORDER BY could name for them.
+     */
+    private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "totalAmount", "status");
+
+    /**
+     * One page of orders for the admin list, hydrated with the customer and line items the
+     * list row needs, ordered per {@code sort} — or newest-first when {@code sort} is null,
+     * blank, or names a field outside {@link #ADMIN_SORTABLE_FIELDS}. A silent fallback
+     * rather than a thrown error, matching {@code PanacheQueryBuilder}'s own default-sort
+     * behaviour: an unresolvable sort request is not a malformed query, it is a request for
+     * "however you'd normally order these".
      * <p>
      * Hand-written rather than routed through {@link FilterRequest}: that path
      * coerces a filter value to boolean/UUID/Long/Double/String only, so a
      * {@code createdAt} bound would bind a String against a timestamp column
-     * and fail. The date range is the whole point of this query.
+     * and fail. The date range is the whole point of this query. The field name is still
+     * validated through the shared {@link FieldNameValidator} PanacheQueryBuilder itself
+     * uses, and further narrowed to a fixed whitelist — a raw-JPQL ORDER BY has no query
+     * planner to fail closed for it the way a Hibernate-managed one does, so a wrong name
+     * here fails at execution as a raw SQL error rather than a controlled one.
      *
      * @param from inclusive lower bound, or null for no lower bound
      * @param to   exclusive upper bound, or null for no upper bound
      */
-    public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, PageRequest pageRequest)
+    public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, SortRequest sort, PageRequest pageRequest)
     {
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
         Map<String, Object> params = new LinkedHashMap<>();
@@ -134,7 +151,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         // combining the fetch with setMaxResults would make Hibernate page in
         // memory over the entire result set.
         TypedQuery<UUID> idQuery = getEntityManager()
-                .createQuery("select o.id from OrderEntity o" + where + " order by o.createdAt desc", UUID.class)
+                .createQuery("select o.id from OrderEntity o" + where + adminOrderByClause(sort), UUID.class)
                 .setFirstResult(page.getOffset())
                 .setMaxResults(page.getPageSize());
         params.forEach(idQuery::setParameter);
@@ -209,6 +226,19 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         return clauses.isEmpty() ? "" : " where " + String.join(" and ", clauses);
+    }
+
+    private String adminOrderByClause(SortRequest sort)
+    {
+        String field = "createdAt";
+        boolean descending = true;
+
+        if (sort != null && sort.getField() != null && ADMIN_SORTABLE_FIELDS.contains(sort.getField())) {
+            field = sort.getField();
+            descending = sort.getDirection() != SortDirection.ASC;
+        }
+
+        return " order by o." + FieldNameValidator.validate(field) + (descending ? " desc" : " asc");
     }
 
     private FilterRequest withDefaultCreatedAtSort(FilterRequest filterRequest)

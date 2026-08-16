@@ -37,6 +37,25 @@ public class OrderEntity extends PanacheEntityBase
     @Column(name = "session_id")
     private UUID sessionId;
 
+    /**
+     * Identifies one checkout intent, stable across a client's retries of it
+     * (.kiro/specs/checkout-idempotency). A bearer capability of the same
+     * entropy as {@link #sessionId} — see {@code KNOWN-LIMITATIONS.md} §4.
+     * Nullable: every order predating this feature, and any created during the
+     * deployment window before the header became required, carries no key.
+     */
+    @Column(name = "idempotency_key")
+    private UUID idempotencyKey;
+
+    /**
+     * A hash of the cart the {@link #idempotencyKey} was minted for, aggregated
+     * and sorted by variant id. Detects a key reused with different contents
+     * (Requirement 3); never recomputed from {@link #items}, since it is a
+     * property of the originating request, not of the order's current state.
+     */
+    @Column(name = "cart_fingerprint")
+    private String cartFingerprint;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
     private OrderStatusEn status = OrderStatusEn.PENDING;
@@ -127,6 +146,30 @@ public class OrderEntity extends PanacheEntityBase
             throw new IllegalArgumentException("id must not be null");
         return find("select distinct o from OrderEntity o left join fetch o.customerEntity left join fetch o.items where o.id = ?1", id)
                 .firstResult();
+    }
+
+    /**
+     * Resolves an order by its checkout idempotency key, joining every
+     * association {@code replayOrder}/{@code computeTotals} touch —
+     * deliberately more than {@link #findOrderInfoById}'s set. This runs
+     * outside a transaction (design §3.3), so a lazy association left
+     * unjoined here is a hard failure, not a slow one: {@code items.variant}
+     * and {@code variant.product} for each line's name and id, and
+     * {@code shippingMethod} for the totals a replay recomputes.
+     */
+    public static OrderEntity findByIdempotencyKey(UUID key)
+    {
+        if (key == null)
+            throw new IllegalArgumentException("key must not be null");
+        return find("""
+                select distinct o from OrderEntity o
+                  left join fetch o.customerEntity
+                  left join fetch o.items i
+                  left join fetch i.variant v
+                  left join fetch v.product
+                  left join fetch o.shippingMethod
+                where o.idempotencyKey = ?1
+                """, key).firstResult();
     }
 
     public static OrderEntity findLatestOrderInfoBySessionId(UUID sessionId)
