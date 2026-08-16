@@ -82,6 +82,9 @@
             <id>github</id>
             <name>GitHub Packages</name>
             <url>https://maven.pkg.github.com/sdebie/ec-common</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </distributionManagement>
 </project>
