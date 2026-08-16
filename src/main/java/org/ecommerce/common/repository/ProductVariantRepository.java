@@ -124,16 +124,6 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 .list();
     }
 
-    /**
-     * Returns the lowest active price for a product across all its variants for a given price type.
-     * Returns {@link BigDecimal#ZERO} when no matching active price is found.
-     */
-    public BigDecimal getMinimumPrice(UUID productId, PriceTypeEn priceType)
-    {
-        return BigDecimal.ZERO;
-
-        //TODO::SDB Get the prices in window
-    }
 
     /** Number of variants for a product; ACTIVE-only unless {@code ignoreStatus}. */
     public int countForProduct(UUID productId, boolean ignoreStatus)

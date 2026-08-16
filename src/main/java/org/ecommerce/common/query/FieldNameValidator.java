@@ -3,7 +3,9 @@ package org.ecommerce.common.query;
 /**
  * Shared JPQL field-name validation — one definition, used by both
  * {@link PanacheQueryBuilder} (sanitize) and
- * {@link org.ecommerce.common.repository.ProductRepository} (buildOrderByClause).
+ * {@link org.ecommerce.common.repository.OrderRepository} (its hand-written admin-list
+ * ORDER BY, which cannot go through {@code PanacheQueryBuilder} — see that repository for
+ * why).
  * <p>
  * Only alphanumerics, underscores, and dots are allowed. Dot notation supports
  * JOIN navigation (e.g. "address.city").

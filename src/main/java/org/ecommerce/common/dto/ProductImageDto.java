@@ -25,6 +25,9 @@ public class ProductImageDto
     @Description("Whether this image is featured")
     private boolean featured;
 
+    @Description("Alt text for accessibility and image search")
+    private String altText;
+
     public ProductImageDto()
     {
     }

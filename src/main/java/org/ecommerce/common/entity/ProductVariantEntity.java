@@ -67,4 +67,30 @@ public class ProductVariantEntity extends PanacheEntityBase
         return list("select v from ProductVariantEntity v left join fetch v.product where v.product.id = ?1 order by v.id asc", productId);
     }
 
+
+    /**
+     * The image that stands for this variant: the one flagged featured, else the first by
+     * sort order. A variant deleted from the catalogue leaves order lines intact, so having
+     * no image at all is a normal state rather than an error.
+     */
+    public String displayImageUrl()
+    {
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+
+        ProductImageEntity chosen = null;
+        for (ProductImageEntity image : images) {
+            if (image == null) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(image.getIsFeatured())) {
+                return image.getImageUrl();
+            }
+            if (chosen == null) {
+                chosen = image;
+            }
+        }
+        return chosen == null ? null : chosen.getImageUrl();
+    }
 }

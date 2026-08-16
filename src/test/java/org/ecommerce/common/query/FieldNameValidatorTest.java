@@ -2,7 +2,6 @@ package org.ecommerce.common.query;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -10,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Unit tests for {@link FieldNameValidator} — the shared field-name sanitizer
  * that guards both PanacheQueryBuilder and buildOrderByClause against injection.
  *
- * Validates: Requirements 10.4
  */
 class FieldNameValidatorTest
 {

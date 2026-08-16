@@ -177,6 +177,40 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return fetchProductsByIds(ids);
     }
 
+    /**
+     * Total count of products matching {@link #findOnSaleProductEntities}'s predicate,
+     * for pagination metadata. Must mirror that method's WHERE-exists clause exactly —
+     * a divergence would report a total inconsistent with the actual page contents.
+     */
+    public long countOnSaleProducts(boolean ignoreStatus)
+    {
+        LocalDateTime now = LocalDateTime.now();
+        List<PriceTypeEn> salePriceTypes = List.of(
+                PriceTypeEn.RETAIL_SALE_PRICE,
+                PriceTypeEn.WHOLESALE_SALE_PRICE);
+
+        String hql = "select count(p) from ProductEntity p " +
+                "where exists (" +
+                "select 1 from ProductVariantEntity v " +
+                "join VariantPricesEntity vp on vp.variant = v " +
+                "where v.product = p " +
+                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
+                "and vp.priceType in :priceTypes " +
+                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+                ")";
+
+        TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
+        q.setParameter("priceTypes", salePriceTypes);
+        q.setParameter("now", now);
+        if (!ignoreStatus) {
+            q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
+        }
+
+        Long result = q.getSingleResult();
+        return result != null ? result : 0L;
+    }
+
     public List<ProductEntity> findOnSaleProductEntities(PageRequest pageRequest, boolean ignoreStatus)
     {
         LocalDateTime now = LocalDateTime.now();

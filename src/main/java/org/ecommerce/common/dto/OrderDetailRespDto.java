@@ -11,6 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * The shopper-facing order-detail shape ({@code getOrderDetail} — guest-order-authorization
+ * S1). Deliberately carries no {@code sessionId}: that field is {@code orderBySessionId}'s
+ * credential, and this response used to hand it out to anyone who could read one order,
+ * closing S1 without closing S2 (Requirement 4.1). Its {@code statusHistory} rows carry no
+ * {@code changedBy} either — staff members' real names — because this surface no longer
+ * admits a staff caller at all (Requirement 1.6/4.4).
+ */
 @Getter
 @Setter
 @Type
@@ -20,7 +28,6 @@ public class OrderDetailRespDto
     private UUID id;
     private CustomerDto customerEntity;
     private BigDecimal totalAmount;
-    private UUID sessionId;
     private OrderStatusEn status;
     private String shippingPhone;
     private String shippingAddressLine1;
@@ -42,7 +49,6 @@ public class OrderDetailRespDto
         private UUID id;
         private OrderStatusEn status;
         private String comment;
-        private String changedBy;
         private LocalDateTime createdAt;
     }
 }
