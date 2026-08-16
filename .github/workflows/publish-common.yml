@@ -33,6 +33,25 @@ jobs:
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
 
+      - name: Configure Maven settings
+        uses: whelk-io/maven-settings-xml-action@v20
+        with:
+          servers: |
+            [
+              {
+                "id": "github-parent",
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
+              }
+            ]
+          repositories: |
+            [
+            {
+              "id": "github-parent",
+              "url": "https://maven.pkg.github.com/sdebie/ec-parent"
+            }
+        ]
+
       # 3. Compile, package, and deploy the JAR directly to GitHub Packages
       - name: Publish to GitHub Packages
         run: mvn --batch-mode deploy -DskipTests
