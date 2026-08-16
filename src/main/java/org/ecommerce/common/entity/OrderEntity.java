@@ -34,6 +34,20 @@ public class OrderEntity extends PanacheEntityBase
     @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount;
 
+    /**
+     * VAT and shipping fee as they were computed when this order was priced —
+     * at creation, or at {@link #shippingMethod} repricing. Null only for an
+     * order placed before this column existed. The admin detail breakdown
+     * reads these rather than recomputing against today's settings, so a
+     * later VAT-rate or shipping-fee change can never move what an
+     * already-charged order appears to have cost.
+     */
+    @Column(name = "vat_amount")
+    private BigDecimal vatAmount;
+
+    @Column(name = "shipping_cost")
+    private BigDecimal shippingCost;
+
     @Column(name = "session_id")
     private UUID sessionId;
 
