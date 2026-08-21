@@ -15,16 +15,4 @@ public class StorefrontCustomerPortalDto
     private AddressDto physicalAddress;  // nullable
     private AddressDto postalAddress;    // nullable
     private boolean hasPassword;
-
-    @Getter
-    @Setter
-    public static class AddressDto
-    {
-        private String line1;
-        private String line2;        // nullable
-        private String suburb;       // nullable
-        private String city;
-        private String province;
-        private String postalCode;
-    }
 }
