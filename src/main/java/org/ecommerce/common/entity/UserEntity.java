@@ -52,12 +52,6 @@ public class UserEntity extends PanacheEntityBase
     @Column(name = "created_at")
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    @Column(name = "reset_token")
-    private String resetToken;
-
-    @Column(name = "reset_token_expiry")
-    private OffsetDateTime resetTokenExpiry;
-
     @Column(name = "password_reset_code_hash")
     private String passwordResetCodeHash;
 
@@ -78,9 +72,5 @@ public class UserEntity extends PanacheEntityBase
         return find("lower(email) = lower(?1)", email).firstResult();
     }
 
-    public static UserEntity findByResetToken(String token)
-    {
-        return find("resetToken", token).firstResult();
-    }
 }
 
