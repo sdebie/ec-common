@@ -33,7 +33,6 @@ public class WishlistItemEntity extends PanacheEntityBase
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    // ── Finders ──────────────────────────────────────────────────────────────
     public static List<WishlistItemEntity> findByCustomerId(UUID customerId)
     {
         return list("customer.id", customerId);

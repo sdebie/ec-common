@@ -33,12 +33,10 @@ public class CustomerEntity extends PanacheEntityBase
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    // ── Link to user account ────────────────────────────────────────────────
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private UserEntity user;
 
-    // ── Profile ─────────────────────────────────────────────────────────────
     @Column(name = "first_name")
     private String firstName;
 
@@ -55,7 +53,6 @@ public class CustomerEntity extends PanacheEntityBase
     @Column(name = "status", nullable = false)
     private CustomerStatusEn status = CustomerStatusEn.PENDING;
 
-    // ── Relationships ────────────────────────────────────────────────────────
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomerAddressEntity> addresses = new ArrayList<>();
 
@@ -67,8 +64,6 @@ public class CustomerEntity extends PanacheEntityBase
 
     @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL)
     private List<OrderEntity> orderEntities;
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
      * Finds a customer by the email stored on the linked {@link UserEntity}.
@@ -88,7 +83,9 @@ public class CustomerEntity extends PanacheEntityBase
         return addressOfType(AddressTypeEn.PHYSICAL);
     }
 
-    /** The customer's postal address, or null when none has been captured. */
+    /**
+     * The customer's postal address, or null when none has been captured.
+     */
     public CustomerAddressEntity getPostalAddress()
     {
         return addressOfType(AddressTypeEn.POSTAL);

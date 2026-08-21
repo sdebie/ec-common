@@ -52,7 +52,6 @@ public class UserEntity extends PanacheEntityBase
     @Column(name = "created_at")
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    // ── Security tokens ────────────────────────────────────────────────────
     @Column(name = "reset_token")
     private String resetToken;
 
@@ -71,11 +70,9 @@ public class UserEntity extends PanacheEntityBase
     @Column(name = "password_reset_code_locked_until")
     private OffsetDateTime passwordResetCodeLockedUntil;
 
-    // ── Relationships ───────────────────────────────────────────────────────
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private CustomerEntity customer;
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
     public static UserEntity findByEmail(String email)
     {
         return find("lower(email) = lower(?1)", email).firstResult();
