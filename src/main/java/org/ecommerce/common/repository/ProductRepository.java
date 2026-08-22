@@ -56,16 +56,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
         ProductQueryBuilder queryBuilder = ProductQueryBuilder.fromProduct(normalizedFilterRequest, ProductEntity.class);
 
-        String hql = "select count(p) from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                "and v.status = :variantStatus " +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
+        String hql = "select count(p) from ProductEntity p where " + buildActivePriceExistsClause(true);
 
         if (Boolean.TRUE.equals(inStockOnly)) {
             hql += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
@@ -115,16 +106,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         // Always select two columns so the result is consistently Object[]
         String idQuery = "select p.id, " +
                 (needsSortKey ? sortKeyExpr + " as sortKey" : "p.name as sortKey") +
-                " from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                "and v.status = :variantStatus " +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
+                " from ProductEntity p where " + buildActivePriceExistsClause(true);
 
         if (Boolean.TRUE.equals(inStockOnly)) {
             idQuery += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
@@ -179,8 +161,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
     /**
      * Total count of products matching {@link #findOnSaleProductEntities}'s predicate,
-     * for pagination metadata. Must mirror that method's WHERE-exists clause exactly —
-     * a divergence would report a total inconsistent with the actual page contents.
+     * for pagination metadata. Shares {@link #buildActivePriceExistsClause} with that
+     * method, so the two can no longer silently diverge.
      */
     public long countOnSaleProducts(boolean ignoreStatus)
     {
@@ -189,16 +171,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 PriceTypeEn.RETAIL_SALE_PRICE,
                 PriceTypeEn.WHOLESALE_SALE_PRICE);
 
-        String hql = "select count(p) from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
+        String hql = "select count(p) from ProductEntity p where " + buildActivePriceExistsClause(!ignoreStatus);
 
         TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
         q.setParameter("priceTypes", salePriceTypes);
@@ -219,17 +192,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 PriceTypeEn.WHOLESALE_SALE_PRICE);
 
         // ─── Step 1: ID-selection query (paged, no collection fetch, no DISTINCT) ───
-        String idQuery = "select p.id from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ") " +
-                "ORDER BY p.name ASC, p.id ASC";
+        String idQuery = "select p.id from ProductEntity p where " + buildActivePriceExistsClause(!ignoreStatus) +
+                " ORDER BY p.name ASC, p.id ASC";
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("priceTypes", salePriceTypes);
@@ -253,6 +217,36 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
         // ─── Step 2: hydration (unpaged, no DISTINCT) ───────────────────────────────
         return fetchProductsByIds(ids);
+    }
+
+    /**
+     * The shared "does this product have a currently-priced variant matching
+     * {@code :priceTypes}" EXISTS fragment — the actual definition of both "in stock at
+     * these prices" (storefront, via {@link #findShoppingProductEntities}/
+     * {@link #countShoppingProducts}) and "on sale" (admin, via
+     * {@link #findOnSaleProductEntities}/{@link #countOnSaleProducts}), so the predicate
+     * exists exactly once regardless of how many callers need it. The caller is
+     * responsible for prepending {@code "where "} and binding {@code :priceTypes},
+     * {@code :now}, and (when {@code includeStatusFilter} is true) {@code :variantStatus}
+     * on the query. The fragment carries no leading/trailing whitespace.
+     *
+     * @param includeStatusFilter whether to require {@code v.status = :variantStatus} —
+     *                            storefront callers always pass {@code true}; the admin
+     *                            on-sale list's {@code ignoreStatus} flag passes
+     *                            {@code false} to also surface disabled products' sale
+     *                            pricing
+     */
+    private String buildActivePriceExistsClause(boolean includeStatusFilter)
+    {
+        return "exists (" +
+                "select 1 from ProductVariantEntity v " +
+                "join VariantPricesEntity vp on vp.variant = v " +
+                "where v.product = p " +
+                (includeStatusFilter ? "and v.status = :variantStatus " : "") +
+                "and vp.priceType in :priceTypes " +
+                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
+                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
+                ")";
     }
 
 
