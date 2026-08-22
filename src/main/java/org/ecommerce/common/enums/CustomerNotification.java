@@ -16,9 +16,11 @@ package org.ecommerce.common.enums;
 public enum CustomerNotification
 {
     /**
-     * Deliberately silent. Either nothing has happened the shopper needs telling about,
-     * or telling them would be actively unhelpful — CREATED and PROCESSING are internal
-     * steps, and FAILED is too vague to send without causing alarm.
+     * Deliberately silent. Either nothing has happened yet that the shopper needs
+     * telling about, or telling them would be actively unhelpful. FAILED is
+     * deliberately NOT one of these despite being vague — see
+     * {@link OrderStatusEn#customerNotification()} for which statuses are silent
+     * and why.
      */
     NONE,
 
