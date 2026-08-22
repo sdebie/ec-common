@@ -181,11 +181,26 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     }
 
     /**
-     * Fetch all ACTIVE variants for a given product (excludes DISABLED).
-     * Used by admin-edit and storefront-detail reads so that soft-deleted variants
-     * are absent after save.
+     * Fetch ACTIVE-only variants for a given product (excludes PENDING and DISABLED).
+     * Used by the public storefront-detail read so an unpublished (PENDING) or
+     * soft-deleted (DISABLED) variant is never customer-visible.
      */
     public List<ProductVariantEntity> findActiveVariantsForProductId(UUID productId)
+    {
+        if (productId == null) return Collections.emptyList();
+        return list(
+                "select v from ProductVariantEntity v left join fetch v.product " +
+                "where v.product.id = ?1 and v.status = ?2 order by v.id asc",
+                productId, ProductStatusEn.ACTIVE);
+    }
+
+    /**
+     * Fetch every variant the admin editor can still act on for a given product —
+     * ACTIVE and PENDING, excludes only soft-deleted (DISABLED) variants.
+     * Used by admin-edit reads so a soft-deleted variant is absent after save,
+     * while a PENDING variant the admin is still staging remains visible.
+     */
+    public List<ProductVariantEntity> findNonDisabledVariantsForProductId(UUID productId)
     {
         if (productId == null) return Collections.emptyList();
         return list(
@@ -193,6 +208,5 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 "where v.product.id = ?1 and v.status <> ?2 order by v.id asc",
                 productId, ProductStatusEn.DISABLED);
     }
-
 
 }
