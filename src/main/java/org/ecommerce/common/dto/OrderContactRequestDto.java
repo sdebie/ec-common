@@ -24,8 +24,23 @@ public class OrderContactRequestDto
     private String lastName;
 
     private String shippingMethodId;  // optional
+
+    // Same not-@NotBlank reasoning as above: OrderContactResource's own
+    // firstNonBlank/address-required check (not this DTO) is what decides
+    // whether a delivery method's address requirement is satisfied, so these
+    // stay omittable here regardless of length caps.
+    @Size(max = 200)
     private String streetAddress;     // optional
+
+    @Size(max = 120)
     private String city;              // optional
+
+    @Size(max = 120)
     private String province;          // optional
+
+    // 20 is deliberately generous, not South-Africa-specific (law 1: no
+    // client-specific code) — no format/digit pattern, since a future
+    // non-SA client's postal codes are not this codebase's business to shape.
+    @Size(max = 20)
     private String postalCode;        // optional
 }
