@@ -45,4 +45,7 @@ public class AdminOrderDetailDto
     private BigDecimal grandTotal;
 
     private List<AdminOrderStatusHistoryDto> statusHistory = new ArrayList<>();
+
+    /** Null until a gateway callback has been recorded for this order. */
+    private AdminOrderPaymentDto latestPayment;
 }

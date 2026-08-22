@@ -61,4 +61,27 @@ public class PaymentLogEntity extends PanacheEntityBase
     {
         this.updatedAt = LocalDateTime.now();
     }
+
+    /**
+     * Records a payment-gateway callback. {@code order} may be null when the
+     * callback's own order reference can't be resolved to a real order — the row
+     * is still kept for the raw audit trail, just unlinked.
+     * <p>
+     * Caller must already hold a transaction; the row is persisted immediately.
+     */
+    public static PaymentLogEntity record(OrderEntity order, String gatewayName, String internalReference,
+                                           String externalReference, BigDecimal amountGross, String status,
+                                           String rawResponse)
+    {
+        PaymentLogEntity log = new PaymentLogEntity();
+        log.setOrderEntity(order);
+        log.setGatewayName(gatewayName);
+        log.setInternalReference(internalReference);
+        log.setExternalReference(externalReference);
+        log.setAmountGross(amountGross);
+        log.setStatus(status);
+        log.setRawResponse(rawResponse);
+        log.persist();
+        return log;
+    }
 }
