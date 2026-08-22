@@ -190,9 +190,11 @@ public enum OrderStatusEn {
      * <p>
      * The silent ones are silent on purpose. CREATED comes before payment, and emailing
      * there means confirming orders that then fail or time out. PROCESSING and
-     * READY_TO_SHIP are warehouse steps a shopper assumes are happening. FAILED is too
-     * vague to send: the cases a shopper can act on have their own statuses, and a bare
-     * "something went wrong" only causes alarm and support tickets.
+     * READY_TO_SHIP are warehouse steps a shopper assumes are happening. PENDING is the
+     * legacy default, reachable by no transition. FAILED is deliberately NOT among
+     * these four: the word is too vague to put in front of a shopper, but an order that
+     * ends in it has still ended, so it borrows the ordinary cancellation email (the
+     * {@code ENDED} case below) rather than saying nothing.
      *
      * @see CustomerNotification
      */
