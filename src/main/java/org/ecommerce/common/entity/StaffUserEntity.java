@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.ecommerce.common.enums.StaffRoleEn;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Getter
@@ -40,6 +41,18 @@ public class StaffUserEntity extends PanacheEntityBase
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "password_reset_code_hash")
+    private String passwordResetCodeHash;
+
+    @Column(name = "password_reset_code_expiry")
+    private OffsetDateTime passwordResetCodeExpiry;
+
+    @Column(name = "password_reset_code_attempts")
+    private int passwordResetCodeAttempts = 0;
+
+    @Column(name = "password_reset_code_locked_until")
+    private OffsetDateTime passwordResetCodeLockedUntil;
 
     // Helper method for login and admin lookups
     public static StaffUserEntity findByEmail(String email)
