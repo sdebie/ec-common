@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.ecommerce.common.enums.QuoteRequestStatusEn;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,16 @@ public class QuoteRequestEntity extends PanacheEntityBase
 
     @Column(name = "status_changed_at")
     private Instant statusChangedAt;
+
+    @Column(name = "quoted_amount", precision = 12, scale = 2)
+    private BigDecimal quotedAmount;
+
+    @Column(name = "quoted_notes", columnDefinition = "TEXT")
+    private String quotedNotes;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "quoted_by", referencedColumnName = "id", nullable = true)
+    private StaffUserEntity quotedBy;
 
     @OneToMany(mappedBy = "quoteRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuoteRequestItemEntity> items = new ArrayList<>();

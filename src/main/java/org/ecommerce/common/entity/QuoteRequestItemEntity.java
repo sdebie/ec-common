@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter
@@ -36,4 +37,7 @@ public class QuoteRequestItemEntity extends PanacheEntityBase
 
     @Column(name = "quantity", nullable = false)
     private int quantity;
+
+    @Column(name = "unit_price", precision = 12, scale = 2)
+    private BigDecimal unitPrice;
 }
