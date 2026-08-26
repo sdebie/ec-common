@@ -11,8 +11,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "product_upload_staged")
-public class ProductUploadStagedEntity extends PanacheEntityBase
+@Table(name = "product_import_staged")
+public class ProductImportStagedEntity extends PanacheEntityBase
 {
     @Id
     @GeneratedValue
@@ -20,7 +20,7 @@ public class ProductUploadStagedEntity extends PanacheEntityBase
 
     @ManyToOne
     @JoinColumn(name = "batch_id")
-    private ProductUploadBatchEntity batch;
+    private ProductImportBatchEntity batch;
 
     @Column(name = "product_slug")
     private String productSlug;

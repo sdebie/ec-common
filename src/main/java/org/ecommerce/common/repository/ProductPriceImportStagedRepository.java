@@ -2,32 +2,32 @@ package org.ecommerce.common.repository;
 
 import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.ecommerce.common.entity.ProductPriceUploadStagedEntity;
+import org.ecommerce.common.entity.ProductPriceImportStagedEntity;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
 
 import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-public class ProductPriceUploadStagedRepository extends BaseRepository<ProductPriceUploadStagedEntity, UUID>
+public class ProductPriceImportStagedRepository extends BaseRepository<ProductPriceImportStagedEntity, UUID>
 {
     @Override
-    protected Class<ProductPriceUploadStagedEntity> getEntityClass()
+    protected Class<ProductPriceImportStagedEntity> getEntityClass()
     {
-        return ProductPriceUploadStagedEntity.class;
+        return ProductPriceImportStagedEntity.class;
     }
 
-    public List<ProductPriceUploadStagedEntity> findByBatchId(UUID batchId)
+    public List<ProductPriceImportStagedEntity> findByBatchId(UUID batchId)
     {
         return list("batch.id = ?1", batchId);
     }
 
-    public List<ProductPriceUploadStagedEntity> findUnprocessedByBatchId(UUID batchId)
+    public List<ProductPriceImportStagedEntity> findUnprocessedByBatchId(UUID batchId)
     {
         return list("batch.id = ?1 and processed = false", batchId);
     }
 
-    public List<ProductPriceUploadStagedEntity> findNextUnprocessedByBatchId(UUID batchId, int limit)
+    public List<ProductPriceImportStagedEntity> findNextUnprocessedByBatchId(UUID batchId, int limit)
     {
         if (limit <= 0) {
             return List.of();

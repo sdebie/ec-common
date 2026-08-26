@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class UploadBatchProcessStatusDto
+public class ImportBatchProcessStatusDto
 {
     private UUID batchId;
     private String status;
