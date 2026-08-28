@@ -4,9 +4,8 @@ package org.ecommerce.common.enums;
  * The email a shopper receives when their order reaches a given status.
  * <p>
  * Which one is a property of the status rather than of whichever writer moved the
- * order there. Before this existed, the single confirmation email was sent from three
- * separate call sites that each decided for themselves — so a new writer sent nothing
- * and nothing caught it, the same defect the stock rules already had.
+ * order there — centralizing it here means a new call site can never forget to notify
+ * the shopper, the same defect class the stock rules guard against.
  * <p>
  * Several statuses share a template because they say the same thing to a shopper: they
  * differ in the copy the template selects, not in the email that arrives.
