@@ -503,13 +503,40 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
     }
 
     /**
+     * Resolves product ids matching a name-or-SKU search term via two separately
+     * indexable queries rather than one OR across a cross-table EXISTS. Postgres cannot
+     * push an index scan through one branch of an OR when the other branch is a
+     * correlated subquery against a different table, so that shape always fell back to
+     * a full sequential scan of products regardless of any index on name — each half
+     * here is a simple, single-table predicate the trigram indexes can serve directly.
+     */
+    private Set<UUID> findProductIdsMatchingSearch(String search)
+    {
+        String searchPattern = "%" + search.trim().toLowerCase() + "%";
+
+        List<UUID> byName = getEntityManager()
+                .createQuery("SELECT p.id FROM ProductEntity p WHERE LOWER(p.name) LIKE :search", UUID.class)
+                .setParameter("search", searchPattern)
+                .getResultList();
+
+        List<UUID> bySku = getEntityManager()
+                .createQuery("SELECT sv.product.id FROM ProductVariantEntity sv WHERE LOWER(sv.sku) LIKE :search", UUID.class)
+                .setParameter("search", searchPattern)
+                .getResultList();
+
+        Set<UUID> matchedIds = new LinkedHashSet<>(byName);
+        matchedIds.addAll(bySku);
+        return matchedIds;
+    }
+
+    /**
      * Paged admin product list (entities), with optional status/category/brand/search
      * filters. Returns the page of entities plus pagination metadata; the caller maps
      * each entity to its DTO.
      */
     public PageResponse<ProductEntity> findAdminProductPage(int pageIndex, int pageSize, String status, String categoryId, String brandId, String search)
     {
-        int effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
+        int effectivePageSize = Math.clamp(pageSize, 1, 100);
         int effectivePageIndex = Math.max(pageIndex, 0);
 
         StringBuilder whereClause = new StringBuilder("WHERE 1=1");
@@ -528,11 +555,12 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
             params.put("brandId", UUID.fromString(brandId));
         }
         if (search != null && !search.isBlank()) {
-            String searchPattern = "%" + search.trim().toLowerCase() + "%";
-            whereClause.append(" AND (LOWER(p.name) LIKE :search")
-                    .append(" OR EXISTS (SELECT 1 FROM ProductVariantEntity sv WHERE sv.product = p AND LOWER(sv.sku) LIKE :search)")
-                    .append(")");
-            params.put("search", searchPattern);
+            Set<UUID> matchedIds = findProductIdsMatchingSearch(search);
+            if (matchedIds.isEmpty()) {
+                return new PageResponse<>(List.of(), 0, 0, effectivePageIndex, effectivePageSize);
+            }
+            whereClause.append(" AND p.id IN :searchMatchIds");
+            params.put("searchMatchIds", matchedIds);
         }
 
         String countHql = "SELECT COUNT(p) FROM ProductEntity p " + whereClause;
