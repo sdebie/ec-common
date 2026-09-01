@@ -7,7 +7,6 @@ import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -32,19 +31,4 @@ public class WishlistItemEntity extends PanacheEntityBase
 
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
-
-    public static List<WishlistItemEntity> findByCustomerId(UUID customerId)
-    {
-        return list("customer.id", customerId);
-    }
-
-    public static WishlistItemEntity findByCustomerAndVariant(UUID customerId, UUID variantId)
-    {
-        return find("customer.id = ?1 and variant.id = ?2", customerId, variantId).firstResult();
-    }
-
-    public static long deleteByCustomerAndVariant(UUID customerId, UUID variantId)
-    {
-        return delete("customer.id = ?1 and variant.id = ?2", customerId, variantId);
-    }
 }

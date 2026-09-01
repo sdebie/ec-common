@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.entity.OrderEntity;
 import org.ecommerce.common.entity.OrderItemEntity;
+import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.query.FieldNameValidator;
@@ -14,14 +15,43 @@ import org.ecommerce.common.query.enums.SortDirection;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 {
+    /**
+     * {@code findAllOrderInfo} (behind the VIEWER-reachable {@code allOrders} GraphQL query)
+     * routes through the inherited, generic {@link BaseRepository#findAll}, so this is a real
+     * gate, not documentation. Excludes {@code idempotencyKey} and {@code cartFingerprint} —
+     * both explicitly "a bearer capability" per this entity's own javadoc, never returned in
+     * any DTO — and every {@code customerEntity.user.*} credential/security-posture field
+     * (password hash, the {@code passwordResetCode*} family, {@code roles}, {@code
+     * mfaEnabled}, {@code lastLogin}), the same class of column already found exploitable via
+     * {@code CustomerRepository}, just reached one hop further through {@code customerEntity}.
+     * {@code customerEntity.user.email} is deliberately left out too even though it isn't
+     * secret (it's already bulk-returned by this endpoint's own {@code OrderMapper}) — nothing
+     * here demonstrates a need to filter by it, and {@code contactEmail} already covers guest
+     * order lookup without a relation traversal.
+     */
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of(
+            "id", "status", "createdAt", "totalAmount", "vatAmount", "shippingCost",
+            "contactEmail", "contactFirstName", "contactLastName",
+            "city", "province", "postalCode", "trackingNumber", "trackingCarrier",
+            "customerEntity.id", "customerEntity.firstName", "customerEntity.lastName",
+            "customerEntity.status", "customerEntity.shopperType",
+            "shippingMethod.id", "shippingMethod.name");
+
     @Override
     protected Class<OrderEntity> getEntityClass()
     {
         return OrderEntity.class;
+    }
+
+    @Override
+    protected Set<String> filterableFields()
+    {
+        return ALLOWED_FILTER_FIELDS;
     }
 
     public OrderEntity findOrderInfoById(UUID id)
@@ -30,16 +60,48 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             throw new IllegalArgumentException("id must not be null");
         }
 
-        List<OrderEntity> results = find("select distinct o from OrderEntity o " +
+        OrderEntity order = find("select o from OrderEntity o " +
                 "left join fetch o.customerEntity " +
-                "left join fetch o.items i " +
-                "left join fetch i.variant v " +
-                "left join fetch v.product " +
                 "where o.id = ?1", id)
-                .list();
+                .firstResult();
 
-        OrderEntity order = results.isEmpty() ? null : results.get(0);
+        if (order == null) {
+            return null;
+        }
+
+        attachItems(List.of(order));
         hydrateVariantImages(order);
+        return order;
+    }
+
+    /**
+     * Resolves an order by its checkout idempotency key, joining every
+     * association {@code replayOrder}/{@code computeTotals} touch —
+     * deliberately more than {@link #findOrderInfoById}'s set. This runs
+     * outside a transaction (design §3.3), so a lazy association left
+     * unjoined here is a hard failure, not a slow one: {@code items.variant}
+     * and {@code variant.product} for each line's name and id (via
+     * {@link #attachItems}), and {@code shippingMethod} for the totals a
+     * replay recomputes.
+     */
+    public OrderEntity findByIdempotencyKey(UUID key)
+    {
+        if (key == null) {
+            throw new IllegalArgumentException("key must not be null");
+        }
+
+        OrderEntity order = find("""
+                select o from OrderEntity o
+                  left join fetch o.customerEntity
+                  left join fetch o.shippingMethod
+                where o.idempotencyKey = ?1
+                """, key).firstResult();
+
+        if (order == null) {
+            return null;
+        }
+
+        attachItems(List.of(order));
         return order;
     }
 
@@ -64,6 +126,60 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return findOrderInfoById(latestOrderId);
     }
 
+    /**
+     * Loads {@code items} (with each line's variant and product to-one chains) for the
+     * given orders in one query and attaches them, instead of a to-many JOIN FETCH from
+     * the order side — which would multiply each order's row once per item and need
+     * DISTINCT to collapse back down.
+     * <p>
+     * Mutates each order's existing {@code items} collection in place ({@code clear()} +
+     * {@code addAll()}) rather than assigning a new {@code List} to the field: {@code items}
+     * cascades with {@code orphanRemoval = true}, and Hibernate tracks that collection by
+     * instance identity — swapping in a different {@code List} instance leaves the original,
+     * still-tracked collection instance orphaned from its owner, which Hibernate refuses to
+     * flush ("A collection with orphan deletion was no longer referenced by the owning
+     * entity instance"). This surfaces for real whenever the same managed order is fetched
+     * more than once in one persistence context — e.g. a test (or service) that persists an
+     * order, then calls a service method that re-fetches it by id before the transaction
+     * commits. Mutating in place never changes which collection instance Hibernate has
+     * registered, so this holds regardless of how many times it runs against the same order
+     * in one session.
+     */
+    private void attachItems(List<OrderEntity> orders)
+    {
+        if (orders == null || orders.isEmpty()) return;
+
+        List<UUID> orderIds = orders.stream().map(OrderEntity::getId).collect(Collectors.toList());
+
+        List<OrderItemEntity> items = getEntityManager()
+                .createQuery("select i from OrderItemEntity i " +
+                        "left join fetch i.variant v " +
+                        "left join fetch v.product " +
+                        "where i.orderEntity.id in :orderIds", OrderItemEntity.class)
+                .setParameter("orderIds", orderIds)
+                .getResultList();
+
+        Map<UUID, List<OrderItemEntity>> itemsByOrderId = new HashMap<>();
+        for (OrderItemEntity item : items) {
+            itemsByOrderId.computeIfAbsent(item.getOrderEntity().getId(), k -> new ArrayList<>()).add(item);
+        }
+
+        for (OrderEntity order : orders) {
+            order.getItems().clear();
+            order.getItems().addAll(itemsByOrderId.getOrDefault(order.getId(), List.of()));
+        }
+    }
+
+    /**
+     * Batch-loads and attaches {@code variant.images} for every variant among an order's
+     * items, in one query grouped by variant id — instead of a to-many JOIN FETCH (which
+     * would multiply rows and need DISTINCT). Every variant here is already a managed
+     * entity from {@link #attachItems}'s fetch-joined {@code i.variant}, so
+     * {@code getEntityManager().find} returns the same instance rather than issuing
+     * another query. Mutates {@code images} in place ({@code clear()} + {@code addAll()})
+     * rather than assigning a new {@code List} — see {@link #attachItems}'s javadoc for
+     * why: {@code images} also cascades with {@code orphanRemoval = true}.
+     */
     private void hydrateVariantImages(OrderEntity order)
     {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
@@ -81,12 +197,25 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return;
         }
 
-        // Fetch only variant->images in a dedicated query to avoid multiple bag fetch in one select.
-        getEntityManager().createQuery(
-                        "select distinct v from ProductVariantEntity v left join fetch v.images where v.id in :variantIds",
-                        ProductVariantEntity.class)
+        List<ProductImageEntity> images = getEntityManager()
+                .createQuery("select img from ProductImageEntity img " +
+                        "where img.productVariant.id in :variantIds " +
+                        "order by img.productVariant.id, img.sortOrder asc", ProductImageEntity.class)
                 .setParameter("variantIds", variantIds)
                 .getResultList();
+
+        Map<UUID, List<ProductImageEntity>> imagesByVariantId = new HashMap<>();
+        for (ProductImageEntity image : images) {
+            imagesByVariantId.computeIfAbsent(image.getProductVariant().getId(), k -> new ArrayList<>()).add(image);
+        }
+
+        for (UUID variantId : variantIds) {
+            ProductVariantEntity variant = getEntityManager().find(ProductVariantEntity.class, variantId);
+            if (variant != null) {
+                variant.getImages().clear();
+                variant.getImages().addAll(imagesByVariantId.getOrDefault(variantId, List.of()));
+            }
+        }
     }
 
     public List<OrderEntity> findAllOrderInfo(PageRequest pageRequest, FilterRequest filterRequest)
@@ -151,7 +280,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         // combining the fetch with setMaxResults would make Hibernate page in
         // memory over the entire result set.
         TypedQuery<UUID> idQuery = getEntityManager()
-                .createQuery("select o.id from OrderEntity o" + where + adminOrderByClause(sort), UUID.class)
+                .createQuery("select o.id from OrderEntity o" + where + adminOrderByClause(sort, ADMIN_SORTABLE_FIELDS, "o", "createdAt"), UUID.class)
                 .setFirstResult(page.getOffset())
                 .setMaxResults(page.getPageSize());
         params.forEach(idQuery::setParameter);
@@ -162,12 +291,12 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         List<OrderEntity> hydrated = getEntityManager()
-                .createQuery("select distinct o from OrderEntity o "
+                .createQuery("select o from OrderEntity o "
                         + "left join fetch o.customerEntity "
-                        + "left join fetch o.items "
                         + "where o.id in :ids", OrderEntity.class)
                 .setParameter("ids", ids)
                 .getResultList();
+        attachItems(hydrated);
 
         // An IN-clause does not preserve the id order, so re-impose the page's.
         Map<UUID, OrderEntity> byId = new LinkedHashMap<>();
@@ -226,19 +355,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         return clauses.isEmpty() ? "" : " where " + String.join(" and ", clauses);
-    }
-
-    private String adminOrderByClause(SortRequest sort)
-    {
-        String field = "createdAt";
-        boolean descending = true;
-
-        if (sort != null && sort.getField() != null && ADMIN_SORTABLE_FIELDS.contains(sort.getField())) {
-            field = sort.getField();
-            descending = sort.getDirection() != SortDirection.ASC;
-        }
-
-        return " order by o." + FieldNameValidator.validate(field) + (descending ? " desc" : " asc");
     }
 
     private FilterRequest withDefaultCreatedAtSort(FilterRequest filterRequest)

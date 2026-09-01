@@ -1,6 +1,5 @@
 package org.ecommerce.common.repository;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductImageEntity;
 
@@ -8,8 +7,14 @@ import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-public class ProductImageRepository implements PanacheRepository<ProductImageEntity>
+public class ProductImageRepository extends BaseRepository<ProductImageEntity, UUID>
 {
+    @Override
+    protected Class<ProductImageEntity> getEntityClass()
+    {
+        return ProductImageEntity.class;
+    }
+
     public List<ProductImageEntity> findByVariantId(UUID variantId)
     {
         if (variantId == null) {

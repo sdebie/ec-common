@@ -9,7 +9,6 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -91,73 +90,4 @@ public class VariantPricesEntity extends PanacheEntityBase
         return true;
     }
 
-    /**
-     * Find all prices for a specific variant.
-     */
-    public static List<VariantPricesEntity> findByVariantId(UUID variantId)
-    {
-        if (variantId == null) return List.of();
-        return list("variant.id = ?1 order by priceType asc, createdAt desc", variantId);
-    }
-
-    /**
-     * Find the active price for a variant by type.
-     */
-    public static VariantPricesEntity findActiveByVariantAndType(UUID variantId, PriceTypeEn priceType)
-    {
-        if (variantId == null || priceType == null) return null;
-
-        LocalDateTime now = LocalDateTime.now();
-        return find(
-                "variant.id = ?1 and priceType = ?2 and (priceStartDate is null or priceStartDate <= ?3) " +
-                        "and (priceEndDate is null or priceEndDate >= ?3) " +
-                        "order by updatedAt desc",
-                variantId, priceType, now
-        ).firstResult();
-    }
-
-    /**
-     * Find the latest price record for a variant by type (regardless of date range).
-     */
-    public static VariantPricesEntity findLatestByVariantAndType(UUID variantId, PriceTypeEn priceType)
-    {
-        if (variantId == null || priceType == null) return null;
-
-        return find(
-                "variant.id = ?1 and priceType = ?2 order by updatedAt desc",
-                variantId, priceType
-        ).firstResult();
-    }
-
-    /**
-     * Find all active prices for a variant.
-     */
-    public static List<VariantPricesEntity> findActiveByVariantId(UUID variantId)
-    {
-        if (variantId == null) return List.of();
-
-        LocalDateTime now = LocalDateTime.now();
-        return list(
-                "variant.id = ?1 and (priceStartDate is null or priceStartDate <= ?2) " +
-                        "and (priceEndDate is null or priceEndDate >= ?2) " +
-                        "order by priceType asc",
-                variantId, now
-        );
-    }
-
-    /**
-     * Find all active prices for a variant and list of price types.
-     */
-    public static List<VariantPricesEntity> findActiveByVariantAndTypes(UUID variantId, List<PriceTypeEn> priceTypes)
-    {
-        if (variantId == null || priceTypes == null || priceTypes.isEmpty()) return List.of();
-
-        LocalDateTime now = LocalDateTime.now();
-        return list(
-                "variant.id = ?1 and priceType in ?2 and (priceStartDate is null or priceStartDate <= ?3) " +
-                        "and (priceEndDate is null or priceEndDate >= ?3) " +
-                        "order by priceType asc",
-                variantId, priceTypes, now
-        );
-    }
 }

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.ImportSourceTypeEn;
 import org.ecommerce.common.enums.ProductUploadStatusEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -18,6 +19,8 @@ public class ProductImportBatchEntity extends PanacheEntityBase
 {
     @Id
     @GeneratedValue
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
     @Column(name = "filename")

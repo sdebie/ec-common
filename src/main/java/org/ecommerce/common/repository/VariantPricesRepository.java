@@ -8,7 +8,9 @@ import org.ecommerce.common.enums.ProductStatusEn;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -20,12 +22,83 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         return VariantPricesEntity.class;
     }
 
+    /**
+     * The shared "is this price currently active" date-window predicate — a row is active
+     * when its {@code priceStartDate}/{@code priceEndDate} are null or straddle a reference
+     * instant. HQL fragment: {@code (alias.priceStartDate IS NULL OR alias.priceStartDate <=
+     * :nowParam) AND (alias.priceEndDate IS NULL OR alias.priceEndDate >= :nowParam)}.
+     *
+     * @param alias    this entity's alias in the enclosing query, or null/blank when it is
+     *                 the implicit (unaliased) query root
+     * @param nowParam the bound-parameter name, without the leading {@code :}, holding the
+     *                 reference instant
+     */
+    static String activeWindowClause(String alias, String nowParam)
+    {
+        String prefix = (alias == null || alias.isBlank()) ? "" : alias + ".";
+        return "(" + prefix + "priceStartDate IS NULL OR " + prefix + "priceStartDate <= :" + nowParam + ") " +
+                "AND (" + prefix + "priceEndDate IS NULL OR " + prefix + "priceEndDate >= :" + nowParam + ")";
+    }
+
     public VariantPricesEntity findLatestByVariantAndType(UUID variantId, PriceTypeEn priceType)
     {
         if (variantId == null || priceType == null) {
             return null;
         }
         return find("variant.id = ?1 and priceType = ?2 order by updatedAt desc", variantId, priceType).firstResult();
+    }
+
+    /** All prices for a specific variant. */
+    public List<VariantPricesEntity> findByVariantId(UUID variantId)
+    {
+        if (variantId == null) return List.of();
+        return list("variant.id = ?1 order by priceType asc, createdAt desc", variantId);
+    }
+
+    /** The active price for a variant by type, within the price's date window. */
+    public VariantPricesEntity findActiveByVariantAndType(UUID variantId, PriceTypeEn priceType)
+    {
+        if (variantId == null || priceType == null) return null;
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("variantId", variantId);
+        params.put("priceType", priceType);
+        params.put("now", LocalDateTime.now());
+        return find("variant.id = :variantId and priceType = :priceType and " +
+                        activeWindowClause(null, "now") +
+                        " order by updatedAt desc",
+                params
+        ).firstResult();
+    }
+
+    /** All active prices for a variant. */
+    public List<VariantPricesEntity> findActiveByVariantId(UUID variantId)
+    {
+        if (variantId == null) return List.of();
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("variantId", variantId);
+        params.put("now", LocalDateTime.now());
+        return list("variant.id = :variantId and " + activeWindowClause(null, "now") +
+                        " order by priceType asc",
+                params
+        );
+    }
+
+    /** All active prices for a variant, restricted to the given price types. */
+    public List<VariantPricesEntity> findActiveByVariantAndTypes(UUID variantId, List<PriceTypeEn> priceTypes)
+    {
+        if (variantId == null || priceTypes == null || priceTypes.isEmpty()) return List.of();
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("variantId", variantId);
+        params.put("priceTypes", priceTypes);
+        params.put("now", LocalDateTime.now());
+        return list("variant.id = :variantId and priceType in :priceTypes and " +
+                        activeWindowClause(null, "now") +
+                        " order by priceType asc",
+                params
+        );
     }
 
     /**
@@ -40,8 +113,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
                 "WHERE v.product.id = :productId " +
                 (ignoreStatus ? "" : "AND v.status = :variantStatus ") +
                 "AND vp.priceType = :priceType " +
-                "AND (vp.priceStartDate IS NULL OR vp.priceStartDate <= :now) " +
-                "AND (vp.priceEndDate IS NULL OR vp.priceEndDate >= :now) " +
+                "AND " + activeWindowClause("vp", "now") + " " +
                 "ORDER BY vp.price ASC, COALESCE(vp.priceStartDate, :veryOldDate) ASC, vp.createdAt ASC";
         TypedQuery<VariantPricesEntity> query = getEntityManager().createQuery(q, VariantPricesEntity.class)
                 .setParameter("productId", productId)
@@ -66,8 +138,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
                 "WHERE v.product.id = :productId " +
                 "AND v.status = :activeStatus " +
                 "AND vp.priceType = :priceType " +
-                "AND (vp.priceStartDate IS NULL OR vp.priceStartDate <= :now) " +
-                "AND (vp.priceEndDate IS NULL OR vp.priceEndDate >= :now) " +
+                "AND " + activeWindowClause("vp", "now") + " " +
                 "ORDER BY vp.price ASC";
         List<VariantPricesEntity> r = getEntityManager().createQuery(q, VariantPricesEntity.class)
                 .setParameter("productId", productId)
@@ -100,8 +171,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
                 "WHERE p.id IN :productIds " +
                 (ignoreStatus ? "" : "AND v.status = :variantStatus ") +
                 "AND vp.priceType IN :priceTypes " +
-                "AND (vp.priceStartDate IS NULL OR vp.priceStartDate <= :now) " +
-                "AND (vp.priceEndDate IS NULL OR vp.priceEndDate >= :now)";
+                "AND " + activeWindowClause("vp", "now");
         TypedQuery<VariantPricesEntity> typedQuery = getEntityManager().createQuery(query, VariantPricesEntity.class)
                 .setParameter("productIds", productIds)
                 .setParameter("priceTypes", priceTypes)
@@ -130,8 +200,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
                 "JOIN FETCH vp.variant v " +
                 "WHERE v.id IN :variantIds " +
                 "AND vp.priceType IN :priceTypes " +
-                "AND (vp.priceStartDate IS NULL OR vp.priceStartDate <= :now) " +
-                "AND (vp.priceEndDate IS NULL OR vp.priceEndDate >= :now)";
+                "AND " + activeWindowClause("vp", "now");
         return getEntityManager().createQuery(query, VariantPricesEntity.class)
                 .setParameter("variantIds", variantIds)
                 .setParameter("priceTypes", priceTypes)

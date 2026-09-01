@@ -11,6 +11,7 @@ import org.ecommerce.common.query.enums.LogicalOperator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -34,10 +35,38 @@ import java.util.UUID;
 @ApplicationScoped
 public class CustomerRepository extends BaseRepository<CustomerEntity, UUID>
 {
+    /**
+     * Plain columns plus the two {@code user.*} paths the admin customer list actually
+     * filters/sorts by today ({@code user.email} via the search expansion below, and both via
+     * the retail/wholesale admin tables' sortable columns). Every other reachable path off
+     * {@code user} — {@code passwordHash}, the {@code passwordResetCode*} family, {@code
+     * mfaEnabled}, {@code roles} — is a credential or security-posture field and must never be
+     * filterable: this is the exact shape of a real, previously-live vulnerability (a VIEWER-role
+     * staff account could read password-reset-code hashes one character at a time via this
+     * filter). {@code wholesaleProfile.creditLimit} is excluded for the same reason as the
+     * anonymous wholesale-price-leak issue elsewhere in this codebase — a negotiated commercial
+     * term, not something any staff role should be able to range-query.
+     */
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of(
+            "id", "firstName", "lastName", "shopperType", "status",
+            "user.email", "user.createdAt", "user.lastLogin");
+
     @Override
     protected Class<CustomerEntity> getEntityClass()
     {
         return CustomerEntity.class;
+    }
+
+    @Override
+    protected Set<String> filterableFields()
+    {
+        return ALLOWED_FILTER_FIELDS;
+    }
+
+    /** Finds a customer by the email stored on the linked {@link org.ecommerce.common.entity.UserEntity}. */
+    public CustomerEntity findByEmail(String email)
+    {
+        return find("lower(user.email) = lower(?1)", email).firstResult();
     }
 
     /** Paged admin customer list matching the given filters, ordered per {@code filterRequest.getSort()}. */
