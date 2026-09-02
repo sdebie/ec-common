@@ -403,7 +403,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return new AdminProductFilter(whereClause, params);
     }
 
-    public long countAdminProducts(String status, String categoryId, String brandId, String search)
+    public long countForAdmin(String status, String categoryId, String brandId, String search)
     {
         AdminProductFilter filter = buildAdminProductFilter(status, categoryId, brandId, search);
         TypedQuery<Long> countQuery = getEntityManager()
@@ -412,7 +412,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return countQuery.getSingleResult();
     }
 
-    public List<ProductEntity> findAdminProducts(PageRequest pageRequest, String status, String categoryId, String brandId, String search)
+    public List<ProductEntity> findForAdmin(PageRequest pageRequest, String status, String categoryId, String brandId, String search)
     {
         AdminProductFilter filter = buildAdminProductFilter(status, categoryId, brandId, search);
 

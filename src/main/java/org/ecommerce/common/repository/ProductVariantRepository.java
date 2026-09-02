@@ -1,14 +1,9 @@
 package org.ecommerce.common.repository;
 
-import io.quarkus.panache.common.Page;
-import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductVariantEntity;
-import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.enums.ProductStatusEn;
-import org.ecommerce.common.query.PageRequest;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -52,7 +47,7 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return list("select v from ProductVariantEntity v left join fetch v.product where v.id in ?1", ids);
     }
 
-    public List<ProductVariantEntity> findByVariantsForProductId(UUID productId)
+    public List<ProductVariantEntity> findVariantsForProductId(UUID productId)
     {
         if (productId == null) return Collections.emptyList();
         return list(
@@ -77,77 +72,6 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
             typedQuery.setParameter("variantStatus", ProductStatusEn.ACTIVE);
         }
         return typedQuery.getResultList();
-    }
-
-    public List<ProductVariantEntity> findOnSaleVariants(PageRequest pageRequest)
-    {
-        LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> salePriceTypes = List.of(
-                PriceTypeEn.RETAIL_SALE_PRICE,
-                PriceTypeEn.WHOLESALE_SALE_PRICE);
-
-        return find(
-                "select v from ProductVariantEntity v " +
-                        "left join fetch v.product p " +
-                        "left join fetch p.categories " +
-                        "where v.id in (" +
-                        "  select v2.id from ProductVariantEntity v2 " +
-                        "  join VariantPricesEntity vp on vp.variant = v2 " +
-                        "  where vp.priceType in ?1 " +
-                        "  and (vp.priceStartDate is null or vp.priceStartDate <= ?2) " +
-                        "  and (vp.priceEndDate is null or vp.priceEndDate >= ?2)" +
-                        ")",
-                Sort.by("sku"),
-                salePriceTypes,
-                now)
-                .page(Page.of(
-                        pageRequest != null ? pageRequest.getPageIndex() : 0,
-                        pageRequest != null ? pageRequest.getPageSize() : 10))
-                .list();
-    }
-
-
-    public int countForProduct(UUID productId, boolean ignoreStatus)
-    {
-        String q = "SELECT COUNT(v.id) FROM ProductVariantEntity v WHERE v.product.id = :productId " +
-                (ignoreStatus ? "" : "AND v.status = :variantStatus");
-        var query = getEntityManager().createQuery(q, Long.class).setParameter("productId", productId);
-        if (!ignoreStatus) {
-            query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
-        }
-        Long count = query.getSingleResult();
-        return count == null ? 0 : count.intValue();
-    }
-
-    /**
-     * First variant id (by id ASC) for a product; ACTIVE-only unless {@code ignoreStatus}.
-     */
-    public String findFirstVariantId(UUID productId, boolean ignoreStatus)
-    {
-        String q = "SELECT v.id FROM ProductVariantEntity v WHERE v.product.id = :productId " +
-                (ignoreStatus ? "" : "AND v.status = :variantStatus ") +
-                "ORDER BY v.id ASC";
-        var query = getEntityManager().createQuery(q, UUID.class)
-                .setParameter("productId", productId)
-                .setMaxResults(1);
-        if (!ignoreStatus) {
-            query.setParameter("variantStatus", ProductStatusEn.ACTIVE);
-        }
-        List<UUID> ids = query.getResultList();
-        return ids.isEmpty() ? null : ids.get(0).toString();
-    }
-
-    /**
-     * Aggregated stock across all variants of a product.
-     */
-    public int sumStock(UUID productId)
-    {
-        Long total = getEntityManager().createQuery(
-                        "SELECT COALESCE(SUM(v.stockQuantity), 0) FROM ProductVariantEntity v WHERE v.product.id = :productId",
-                        Long.class)
-                .setParameter("productId", productId)
-                .getSingleResult();
-        return total == null ? 0 : total.intValue();
     }
 
     /**

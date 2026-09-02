@@ -16,6 +16,12 @@ public class PaymentLogRepository extends BaseRepository<PaymentLogEntity, UUID>
         return PaymentLogEntity.class;
     }
 
+    /** The most recent payment-gateway log row for an order, or null if it has none. */
+    public PaymentLogEntity findLatestByOrderId(UUID orderId)
+    {
+        return find("select l from PaymentLogEntity l where l.orderEntity.id = ?1 order by l.createdAt desc", orderId).firstResult();
+    }
+
     public PaymentLogEntity record(OrderEntity order, String gatewayName, String internalReference, String externalReference, BigDecimal amountGross, String status, String rawResponse)
     {
         PaymentLogEntity log = new PaymentLogEntity();

@@ -31,14 +31,6 @@ public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
         return find("lower(slug) = ?1", slug.trim().toLowerCase()).firstResult();
     }
 
-    public CategoryEntity findMainCategoryById(UUID id)
-    {
-        if (id == null) {
-            return null;
-        }
-        return find("id = ?1 and parent is null", id).firstResult();
-    }
-
     public CategoryEntity findByNameExcludingId(String name, UUID excludeId)
     {
         if (excludeId == null) {
@@ -47,7 +39,7 @@ public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
         return find("lower(name) = lower(?1) and id != ?2", name, excludeId).firstResult();
     }
 
-    public CategoryEntity findBySlugExcludingId(String slug, Object excludeId)
+    public CategoryEntity findBySlugExcludingId(String slug, UUID excludeId)
     {
         if (excludeId == null) {
             return find("lower(slug) = lower(?1)", slug).firstResult();

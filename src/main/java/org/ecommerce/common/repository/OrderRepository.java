@@ -55,7 +55,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         attachItems(List.of(order));
-        hydrateVariantImages(order);
+        hydrateVariantImages(List.of(order));
         return order;
     }
 
@@ -113,27 +113,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return found.isEmpty() ? null : found.get(0);
     }
 
-    public OrderEntity findLatestOrderInfoBySessionId(UUID sessionId)
-    {
-        if (sessionId == null) {
-            throw new IllegalArgumentException("sessionId must not be null");
-        }
-
-        UUID latestOrderId = getEntityManager()
-                .createQuery("select o.id from OrderEntity o where o.sessionId = :sessionId order by o.createdAt desc", UUID.class)
-                .setParameter("sessionId", sessionId)
-                .setMaxResults(1)
-                .getResultStream()
-                .findFirst()
-                .orElse(null);
-
-        if (latestOrderId == null) {
-            return null;
-        }
-
-        return findOrderInfoById(latestOrderId);
-    }
-
     private void attachItems(List<OrderEntity> orders)
     {
         if (orders == null || orders.isEmpty()) return;
@@ -159,16 +138,21 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
     }
 
-    private void hydrateVariantImages(OrderEntity order)
+    private void hydrateVariantImages(List<OrderEntity> orders)
     {
-        if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
+        if (orders == null || orders.isEmpty()) {
             return;
         }
 
         Set<UUID> variantIds = new HashSet<>();
-        for (OrderItemEntity item : order.getItems()) {
-            if (item != null && item.getVariant() != null && item.getVariant().getId() != null) {
-                variantIds.add(item.getVariant().getId());
+        for (OrderEntity order : orders) {
+            if (order == null || order.getItems() == null) {
+                continue;
+            }
+            for (OrderItemEntity item : order.getItems()) {
+                if (item != null && item.getVariant() != null && item.getVariant().getId() != null) {
+                    variantIds.add(item.getVariant().getId());
+                }
             }
         }
 
@@ -207,17 +191,13 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return Collections.emptyList();
         }
 
-        List<OrderEntity> hydratedOrders = new ArrayList<>(pagedOrders.size());
-        for (OrderEntity order : pagedOrders) {
-            if (order == null || order.getId() == null) {
-                continue;
-            }
-            OrderEntity fullOrder = findOrderInfoById(order.getId());
-            if (fullOrder != null) {
-                hydratedOrders.add(fullOrder);
-            }
-        }
+        List<UUID> ids = pagedOrders.stream()
+                .map(OrderEntity::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
+        List<OrderEntity> hydratedOrders = hydrateOrdersById(ids);
+        hydrateVariantImages(hydratedOrders);
         return hydratedOrders;
     }
 
@@ -235,8 +215,18 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                 .setMaxResults(page.getPageSize());
         params.forEach(idQuery::setParameter);
 
-        List<UUID> ids = idQuery.getResultList();
-        if (ids.isEmpty()) {
+        return hydrateOrdersById(idQuery.getResultList());
+    }
+
+    /**
+     * Batch-loads orders with their customer and items in three queries total, however many
+     * ids are given — the shape both {@link #findAllOrderInfo} and {@link #findForAdmin} need,
+     * kept in one place so neither drifts into re-fetching a page one row at a time.
+     * Returns orders in the same order as {@code ids}; an id with no matching row is skipped.
+     */
+    private List<OrderEntity> hydrateOrdersById(List<UUID> ids)
+    {
+        if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();
         }
 
