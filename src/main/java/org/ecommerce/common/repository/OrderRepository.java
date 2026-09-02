@@ -4,8 +4,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.entity.OrderEntity;
 import org.ecommerce.common.entity.OrderItemEntity;
-import org.ecommerce.common.entity.ProductImageEntity;
-import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PageRequest;
@@ -55,7 +53,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         attachItems(List.of(order));
-        hydrateVariantImages(List.of(order));
         return order;
     }
 
@@ -138,49 +135,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
     }
 
-    private void hydrateVariantImages(List<OrderEntity> orders)
-    {
-        if (orders == null || orders.isEmpty()) {
-            return;
-        }
-
-        Set<UUID> variantIds = new HashSet<>();
-        for (OrderEntity order : orders) {
-            if (order == null || order.getItems() == null) {
-                continue;
-            }
-            for (OrderItemEntity item : order.getItems()) {
-                if (item != null && item.getVariant() != null && item.getVariant().getId() != null) {
-                    variantIds.add(item.getVariant().getId());
-                }
-            }
-        }
-
-        if (variantIds.isEmpty()) {
-            return;
-        }
-
-        List<ProductImageEntity> images = getEntityManager()
-                .createQuery("select img from ProductImageEntity img " +
-                        "where img.productVariant.id in :variantIds " +
-                        "order by img.productVariant.id, img.sortOrder asc", ProductImageEntity.class)
-                .setParameter("variantIds", variantIds)
-                .getResultList();
-
-        Map<UUID, List<ProductImageEntity>> imagesByVariantId = new HashMap<>();
-        for (ProductImageEntity image : images) {
-            imagesByVariantId.computeIfAbsent(image.getProductVariant().getId(), k -> new ArrayList<>()).add(image);
-        }
-
-        for (UUID variantId : variantIds) {
-            ProductVariantEntity variant = getEntityManager().find(ProductVariantEntity.class, variantId);
-            if (variant != null) {
-                variant.getImages().clear();
-                variant.getImages().addAll(imagesByVariantId.getOrDefault(variantId, List.of()));
-            }
-        }
-    }
-
     public List<OrderEntity> findAllOrderInfo(PageRequest pageRequest, FilterRequest filterRequest)
     {
         PageRequest effectivePageRequest = pageRequest == null ? new PageRequest() : pageRequest;
@@ -196,9 +150,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        List<OrderEntity> hydratedOrders = hydrateOrdersById(ids);
-        hydrateVariantImages(hydratedOrders);
-        return hydratedOrders;
+        return hydrateOrdersById(ids);
     }
 
     private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "totalAmount", "status");

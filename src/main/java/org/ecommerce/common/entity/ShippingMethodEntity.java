@@ -1,6 +1,5 @@
 package org.ecommerce.common.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,7 +13,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "shipping_methods")
-public class ShippingMethodEntity extends PanacheEntityBase
+public class ShippingMethodEntity
 {
     @Id
     @GeneratedValue

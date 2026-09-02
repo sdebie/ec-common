@@ -10,6 +10,7 @@ import org.ecommerce.common.query.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
@@ -422,4 +423,82 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return products;
     }
 
+    private static final String EXPORT_FULL_SQL = """
+            SELECT
+                p.id AS product_id,
+                v.sku,
+                p.name,
+                p.description,
+                p.short_description,
+                (SELECT STRING_AGG(c2.slug, '|' ORDER BY c2.slug)
+                 FROM product_categories pc2
+                 JOIN categories c2 ON pc2.category_id = c2.id
+                 WHERE pc2.product_id = p.id) AS product_categories,
+                p.product_type,
+                b.slug AS brand_slug,
+                (SELECT price FROM variant_prices WHERE variant_id = v.id AND price_type = 'RETAIL_PRICE' ORDER BY created_at DESC LIMIT 1) as retail_price,
+                (SELECT price FROM variant_prices WHERE variant_id = v.id AND price_type = 'WHOLESALE_PRICE' ORDER BY created_at DESC LIMIT 1) as wholesale_price,
+                v.stock_quantity as stock,
+                (SELECT STRING_AGG(image_url, ',') FROM product_images WHERE variant_id = v.id) as images,
+                v.attributes
+            FROM product_variants v
+            JOIN products p ON v.product_id = p.id
+            LEFT JOIN brands b ON p.brand_id = b.id
+            """;
+
+    private static final String EXPORT_LIST_SQL = """
+            SELECT
+                p.slug AS product_id,
+                v.sku,
+                p.name,
+                p.description,
+                p.short_description,
+                (SELECT c1.slug
+                 FROM product_categories pc1
+                 JOIN categories c1 ON pc1.category_id = c1.id
+                 WHERE pc1.product_id = p.id
+                 ORDER BY c1.slug
+                 LIMIT 1) AS category_slug,
+                (SELECT STRING_AGG(c2.slug, '|' ORDER BY c2.slug)
+                 FROM product_categories pc2
+                 JOIN categories c2 ON pc2.category_id = c2.id
+                 WHERE pc2.product_id = p.id) AS product_categories,
+                p.product_type,
+                b.slug AS brand_slug,
+                v.stock_quantity as stock,
+                (SELECT STRING_AGG(image_url, ',') FROM product_images WHERE variant_id = v.id) as images,
+                v.attributes
+            FROM product_variants v
+            JOIN products p ON v.product_id = p.id
+            LEFT JOIN brands b ON p.brand_id = b.id
+            """;
+
+    private static final String EXPORT_PRICE_SQL = """
+            SELECT
+                v.sku,
+                (SELECT price FROM variant_prices WHERE variant_id = v.id AND price_type = 'RETAIL_PRICE' ORDER BY created_at DESC LIMIT 1) as retail_price,
+                (SELECT price FROM variant_prices WHERE variant_id = v.id AND price_type = 'WHOLESALE_PRICE' ORDER BY created_at DESC LIMIT 1) as wholesale_price
+            FROM product_variants v
+            """;
+
+    /** Every product/variant row for the full CSV export, streamed to avoid loading the whole catalogue into memory. */
+    @SuppressWarnings("unchecked")
+    public Stream<Object[]> streamExportRows()
+    {
+        return getEntityManager().createNativeQuery(EXPORT_FULL_SQL).getResultStream();
+    }
+
+    /** The list-export shape, keyed by product slug rather than id — same idea, fewer columns. */
+    @SuppressWarnings("unchecked")
+    public Stream<Object[]> streamListExportRows()
+    {
+        return getEntityManager().createNativeQuery(EXPORT_LIST_SQL).getResultStream();
+    }
+
+    /** SKU plus retail/wholesale price only, for the price-only export. */
+    @SuppressWarnings("unchecked")
+    public Stream<Object[]> streamPriceExportRows()
+    {
+        return getEntityManager().createNativeQuery(EXPORT_PRICE_SQL).getResultStream();
+    }
 }

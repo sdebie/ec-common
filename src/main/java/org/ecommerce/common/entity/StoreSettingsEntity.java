@@ -1,6 +1,5 @@
 package org.ecommerce.common.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -12,7 +11,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "store_settings")
-public class StoreSettingsEntity extends PanacheEntityBase
+public class StoreSettingsEntity
 {
     @Id
     @Column(name = "setting_key")

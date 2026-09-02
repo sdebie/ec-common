@@ -3,7 +3,10 @@ package org.ecommerce.common.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.ProductImageEntity;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -57,6 +60,22 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
                         ProductImageEntity.class)
                 .setParameter("variantIds", variantIds)
                 .getResultList();
+    }
+
+    /**
+     * {@link #findForVariantIds}, grouped by variant id — the shape an order-hydration path
+     * needs to attach each line's pictures without ever touching {@code ProductVariantEntity}'s
+     * own managed {@code images} collection. Each list keeps the query's own order: featured
+     * image first, then by sort order — so a caller wanting just the display image can take
+     * element 0.
+     */
+    public Map<UUID, List<ProductImageEntity>> findGroupedByVariantIds(List<UUID> variantIds)
+    {
+        Map<UUID, List<ProductImageEntity>> byVariantId = new LinkedHashMap<>();
+        for (ProductImageEntity image : findForVariantIds(variantIds)) {
+            byVariantId.computeIfAbsent(image.getProductVariant().getId(), k -> new ArrayList<>()).add(image);
+        }
+        return byVariantId;
     }
 
     public ProductImageEntity findFeaturedByProductId(UUID productId)

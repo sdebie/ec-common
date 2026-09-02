@@ -1,6 +1,5 @@
 package org.ecommerce.common.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,7 +22,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "variant_prices")
-public class VariantPricesEntity extends PanacheEntityBase
+public class VariantPricesEntity
 {
     @Id
     @GeneratedValue
