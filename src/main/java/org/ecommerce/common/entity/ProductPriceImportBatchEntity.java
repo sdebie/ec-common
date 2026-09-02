@@ -14,7 +14,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "product_price_import_batches")
-public class ProductPriceImportBatchEntity extends PanacheEntityBase {
+public class ProductPriceImportBatchEntity extends PanacheEntityBase implements ImportBatchEntity {
     @Id
     @GeneratedValue
     private UUID id;

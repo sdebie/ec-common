@@ -14,7 +14,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "product_import_batches")
-public class ProductImportBatchEntity extends PanacheEntityBase
+public class ProductImportBatchEntity extends PanacheEntityBase implements ImportBatchEntity
 {
     @Id
     @GeneratedValue
@@ -49,4 +49,7 @@ public class ProductImportBatchEntity extends PanacheEntityBase
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 }
