@@ -7,7 +7,6 @@ import org.ecommerce.common.entity.OrderItemEntity;
 import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
-import org.ecommerce.common.query.FieldNameValidator;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
@@ -20,20 +19,6 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 {
-    /**
-     * {@code findAllOrderInfo} (behind the VIEWER-reachable {@code allOrders} GraphQL query)
-     * routes through the inherited, generic {@link BaseRepository#findAll}, so this is a real
-     * gate, not documentation. Excludes {@code idempotencyKey} and {@code cartFingerprint} —
-     * both explicitly "a bearer capability" per this entity's own javadoc, never returned in
-     * any DTO — and every {@code customerEntity.user.*} credential/security-posture field
-     * (password hash, the {@code passwordResetCode*} family, {@code roles}, {@code
-     * mfaEnabled}, {@code lastLogin}), the same class of column already found exploitable via
-     * {@code CustomerRepository}, just reached one hop further through {@code customerEntity}.
-     * {@code customerEntity.user.email} is deliberately left out too even though it isn't
-     * secret (it's already bulk-returned by this endpoint's own {@code OrderMapper}) — nothing
-     * here demonstrates a need to filter by it, and {@code contactEmail} already covers guest
-     * order lookup without a relation traversal.
-     */
     private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of(
             "id", "status", "createdAt", "totalAmount", "vatAmount", "shippingCost",
             "contactEmail", "contactFirstName", "contactLastName",
@@ -74,16 +59,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return order;
     }
 
-    /**
-     * Resolves an order by its checkout idempotency key, joining every
-     * association {@code replayOrder}/{@code computeTotals} touch —
-     * deliberately more than {@link #findOrderInfoById}'s set. This runs
-     * outside a transaction (design §3.3), so a lazy association left
-     * unjoined here is a hard failure, not a slow one: {@code items.variant}
-     * and {@code variant.product} for each line's name and id (via
-     * {@link #attachItems}), and {@code shippingMethod} for the totals a
-     * replay recomputes.
-     */
     public OrderEntity findByIdempotencyKey(UUID key)
     {
         if (key == null) {
@@ -126,25 +101,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return findOrderInfoById(latestOrderId);
     }
 
-    /**
-     * Loads {@code items} (with each line's variant and product to-one chains) for the
-     * given orders in one query and attaches them, instead of a to-many JOIN FETCH from
-     * the order side — which would multiply each order's row once per item and need
-     * DISTINCT to collapse back down.
-     * <p>
-     * Mutates each order's existing {@code items} collection in place ({@code clear()} +
-     * {@code addAll()}) rather than assigning a new {@code List} to the field: {@code items}
-     * cascades with {@code orphanRemoval = true}, and Hibernate tracks that collection by
-     * instance identity — swapping in a different {@code List} instance leaves the original,
-     * still-tracked collection instance orphaned from its owner, which Hibernate refuses to
-     * flush ("A collection with orphan deletion was no longer referenced by the owning
-     * entity instance"). This surfaces for real whenever the same managed order is fetched
-     * more than once in one persistence context — e.g. a test (or service) that persists an
-     * order, then calls a service method that re-fetches it by id before the transaction
-     * commits. Mutating in place never changes which collection instance Hibernate has
-     * registered, so this holds regardless of how many times it runs against the same order
-     * in one session.
-     */
     private void attachItems(List<OrderEntity> orders)
     {
         if (orders == null || orders.isEmpty()) return;
@@ -170,16 +126,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
     }
 
-    /**
-     * Batch-loads and attaches {@code variant.images} for every variant among an order's
-     * items, in one query grouped by variant id — instead of a to-many JOIN FETCH (which
-     * would multiply rows and need DISTINCT). Every variant here is already a managed
-     * entity from {@link #attachItems}'s fetch-joined {@code i.variant}, so
-     * {@code getEntityManager().find} returns the same instance rather than issuing
-     * another query. Mutates {@code images} in place ({@code clear()} + {@code addAll()})
-     * rather than assigning a new {@code List} — see {@link #attachItems}'s javadoc for
-     * why: {@code images} also cascades with {@code orphanRemoval = true}.
-     */
     private void hydrateVariantImages(OrderEntity order)
     {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
@@ -242,43 +188,14 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return hydratedOrders;
     }
 
-    /**
-     * The columns an admin can sort the order list by. Every other row field — reference,
-     * the placed-by name, item count — is derived rather than stored ({@link OrderEntity}'s
-     * own {@code getReference()}/{@code getPlacedByName()}/{@code totalUnits()}), so there is
-     * no single JPQL property an ORDER BY could name for them.
-     */
     private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "totalAmount", "status");
 
-    /**
-     * One page of orders for the admin list, hydrated with the customer and line items the
-     * list row needs, ordered per {@code sort} — or newest-first when {@code sort} is null,
-     * blank, or names a field outside {@link #ADMIN_SORTABLE_FIELDS}. A silent fallback
-     * rather than a thrown error, matching {@code PanacheQueryBuilder}'s own default-sort
-     * behaviour: an unresolvable sort request is not a malformed query, it is a request for
-     * "however you'd normally order these".
-     * <p>
-     * Hand-written rather than routed through {@link FilterRequest}: that path
-     * coerces a filter value to boolean/UUID/Long/Double/String only, so a
-     * {@code createdAt} bound would bind a String against a timestamp column
-     * and fail. The date range is the whole point of this query. The field name is still
-     * validated through the shared {@link FieldNameValidator} PanacheQueryBuilder itself
-     * uses, and further narrowed to a fixed whitelist — a raw-JPQL ORDER BY has no query
-     * planner to fail closed for it the way a Hibernate-managed one does, so a wrong name
-     * here fails at execution as a raw SQL error rather than a controlled one.
-     *
-     * @param from inclusive lower bound, or null for no lower bound
-     * @param to   exclusive upper bound, or null for no upper bound
-     */
     public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, SortRequest sort, PageRequest pageRequest)
     {
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
         Map<String, Object> params = new LinkedHashMap<>();
         String where = adminWhereClause(statuses, from, to, params);
 
-        // Page over ids alone. A bag fetch of o.items cannot be paged in SQL, so
-        // combining the fetch with setMaxResults would make Hibernate page in
-        // memory over the entire result set.
         TypedQuery<UUID> idQuery = getEntityManager()
                 .createQuery("select o.id from OrderEntity o" + where + adminOrderByClause(sort, ADMIN_SORTABLE_FIELDS, "o", "createdAt"), UUID.class)
                 .setFirstResult(page.getOffset())
@@ -298,7 +215,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                 .getResultList();
         attachItems(hydrated);
 
-        // An IN-clause does not preserve the id order, so re-impose the page's.
         Map<UUID, OrderEntity> byId = new LinkedHashMap<>();
         for (OrderEntity order : hydrated) {
             byId.put(order.getId(), order);
@@ -314,9 +230,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return ordered;
     }
 
-    /**
-     * Total matching {@link #findForAdmin} under the same filters, for paging.
-     */
     public long countForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to)
     {
         Map<String, Object> params = new LinkedHashMap<>();
@@ -329,14 +242,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return query.getSingleResult();
     }
 
-    /**
-     * Builds the shared WHERE clause and fills {@code params} with its bindings.
-     *
-     * @param statuses the statuses to match, or null for every status. An <em>empty</em>
-     *                 collection is not the same thing: it means the caller's filters
-     *                 admit nothing, and callers short-circuit on it rather than passing
-     *                 it here, since {@code in ()} is not valid SQL.
-     */
     private String adminWhereClause(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, Map<String, Object> params)
     {
         List<String> clauses = new ArrayList<>();

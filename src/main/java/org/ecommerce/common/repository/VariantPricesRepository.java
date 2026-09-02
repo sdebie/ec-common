@@ -7,11 +7,7 @@ import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.enums.ProductStatusEn;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @ApplicationScoped
 public class VariantPricesRepository extends BaseRepository<VariantPricesEntity, UUID>
@@ -22,17 +18,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         return VariantPricesEntity.class;
     }
 
-    /**
-     * The shared "is this price currently active" date-window predicate — a row is active
-     * when its {@code priceStartDate}/{@code priceEndDate} are null or straddle a reference
-     * instant. HQL fragment: {@code (alias.priceStartDate IS NULL OR alias.priceStartDate <=
-     * :nowParam) AND (alias.priceEndDate IS NULL OR alias.priceEndDate >= :nowParam)}.
-     *
-     * @param alias    this entity's alias in the enclosing query, or null/blank when it is
-     *                 the implicit (unaliased) query root
-     * @param nowParam the bound-parameter name, without the leading {@code :}, holding the
-     *                 reference instant
-     */
     static String activeWindowClause(String alias, String nowParam)
     {
         String prefix = (alias == null || alias.isBlank()) ? "" : alias + ".";
@@ -48,14 +33,12 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         return find("variant.id = ?1 and priceType = ?2 order by updatedAt desc", variantId, priceType).firstResult();
     }
 
-    /** All prices for a specific variant. */
     public List<VariantPricesEntity> findByVariantId(UUID variantId)
     {
         if (variantId == null) return List.of();
         return list("variant.id = ?1 order by priceType asc, createdAt desc", variantId);
     }
 
-    /** The active price for a variant by type, within the price's date window. */
     public VariantPricesEntity findActiveByVariantAndType(UUID variantId, PriceTypeEn priceType)
     {
         if (variantId == null || priceType == null) return null;
@@ -71,7 +54,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         ).firstResult();
     }
 
-    /** All active prices for a variant. */
     public List<VariantPricesEntity> findActiveByVariantId(UUID variantId)
     {
         if (variantId == null) return List.of();
@@ -85,7 +67,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         );
     }
 
-    /** All active prices for a variant, restricted to the given price types. */
     public List<VariantPricesEntity> findActiveByVariantAndTypes(UUID variantId, List<PriceTypeEn> priceTypes)
     {
         if (variantId == null || priceTypes == null || priceTypes.isEmpty()) return List.of();
@@ -101,11 +82,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         );
     }
 
-    /**
-     * Lowest active price for a product across its variants for a given price type,
-     * within the active window. Tie-break: price, then earliest start date, then created.
-     * (Used to build shopping list-item DTOs.)
-     */
     public VariantPricesEntity findLowestActive(UUID productId, PriceTypeEn priceType, LocalDateTime now, boolean ignoreStatus)
     {
         LocalDateTime veryOldDate = LocalDateTime.of(1970, 1, 1, 0, 0);
@@ -128,10 +104,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         return r.isEmpty() ? null : r.get(0);
     }
 
-    /**
-     * Lowest active RETAIL_PRICE across a product's ACTIVE variants, within the active
-     * window, ordered by price. (Used to build admin list-item DTOs.)
-     */
     public VariantPricesEntity findLowestActiveRetailForAdmin(UUID productId, LocalDateTime now)
     {
         String q = "SELECT vp FROM VariantPricesEntity vp JOIN vp.variant v " +
@@ -150,11 +122,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         return r.isEmpty() ? null : r.get(0);
     }
 
-    /**
-     * Returns the active candidate prices for a page of products in one query.
-     * The list assembler applies the existing per-product tie-break rule in
-     * memory. Keeping the query here preserves repository ownership of reads.
-     */
     public List<VariantPricesEntity> findActiveForProductIds(
             List<UUID> productIds,
             List<PriceTypeEn> priceTypes,
@@ -182,11 +149,6 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         return typedQuery.getResultList();
     }
 
-    /**
-     * Returns the active prices for a set of variant IDs (all requested price types,
-     * within the active date window). Used by the wishlist hydration service to batch-fetch
-     * prices for resolved variants.
-     */
     public List<VariantPricesEntity> findActiveForVariantIds(
             List<UUID> variantIds,
             List<PriceTypeEn> priceTypes,

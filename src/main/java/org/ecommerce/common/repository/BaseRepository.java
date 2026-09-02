@@ -2,11 +2,7 @@ package org.ecommerce.common.repository;
 
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
-import org.ecommerce.common.query.FieldNameValidator;
-import org.ecommerce.common.query.FilterRequest;
-import org.ecommerce.common.query.PageRequest;
-import org.ecommerce.common.query.PanacheQueryBuilder;
-import org.ecommerce.common.query.SortRequest;
+import org.ecommerce.common.query.*;
 import org.ecommerce.common.query.enums.SortDirection;
 
 import java.util.List;
@@ -31,6 +27,18 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
     protected Set<String> filterableFields()
     {
         return Set.of();
+    }
+
+    /**
+     * Lets a subclass route its {@link #findAll(PageRequest, FilterRequest)}/
+     * {@link #count(FilterRequest)} filtering through a
+     * {@link PanacheQueryBuilder.CollectionExistsRewrite} — e.g. rewriting a filter on a
+     * to-many association into a safe EXISTS subquery — without having to override either
+     * method just to inject it. {@code null} by default (no rewrite).
+     */
+    protected PanacheQueryBuilder.CollectionExistsRewrite collectionRewrite()
+    {
+        return null;
     }
 
     /**
@@ -63,7 +71,7 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
 
     public List<T> findAll(PageRequest pageRequest, FilterRequest filterRequest)
     {
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest, getEntityClass(), filterableFields());
+        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest, getEntityClass(), collectionRewrite(), filterableFields());
         PanacheQuery<T> query;
 
         if (queryBuilder.hasQuery() && queryBuilder.hasParams()) {
@@ -83,7 +91,7 @@ public abstract class BaseRepository<T, ID> implements PanacheRepositoryBase<T, 
 
     public long count(FilterRequest filterRequest)
     {
-        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest, getEntityClass(), filterableFields());
+        PanacheQueryBuilder queryBuilder = PanacheQueryBuilder.from(filterRequest, getEntityClass(), collectionRewrite(), filterableFields());
 
         if (queryBuilder.hasQuery() && queryBuilder.hasParams()) {
             return count(queryBuilder.query(), queryBuilder.params());

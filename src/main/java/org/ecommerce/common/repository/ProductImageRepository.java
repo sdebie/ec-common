@@ -23,25 +23,19 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
         return list("productVariant.id", variantId);
     }
 
-    public long deleteByVariantId(UUID variantId)
+    public void deleteByVariantId(UUID variantId)
     {
         if (variantId == null) {
-            return 0L;
+            return;
         }
-        return delete("productVariant.id", variantId);
+        delete("productVariant.id", variantId);
     }
 
-    /**
-     * Find all images for a product, ordered by sort order
-     */
     public List<ProductImageEntity> findByProductId(UUID productId)
     {
         return list("productVariant.product.id = ?1 ORDER BY sortOrder ASC", productId);
     }
 
-    /**
-     * All images for a product, ordered for listing: featured first, then sortOrder, then id.
-     */
     public List<ProductImageEntity> findForListing(UUID productId)
     {
         return getEntityManager().createQuery(
@@ -53,10 +47,6 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
                 .getResultList();
     }
 
-    /**
-     * Fetches all listing images for a page of products.  The fetch joins make
-     * grouping by product and mapping the image DTO safe without lazy loads.
-     */
     public List<ProductImageEntity> findForListingProductIds(List<UUID> productIds)
     {
         if (productIds == null || productIds.isEmpty()) {
@@ -73,7 +63,6 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
                 .getResultList();
     }
 
-    /** Fetches images for a set of variants in the same order used for thumbnails. */
     public List<ProductImageEntity> findForVariantIds(List<UUID> variantIds)
     {
         if (variantIds == null || variantIds.isEmpty()) {
@@ -89,9 +78,6 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
                 .getResultList();
     }
 
-    /**
-     * The thumbnail (first image) for a variant, ordered featured-first then sortOrder then id.
-     */
     public ProductImageEntity findThumbnailForVariant(UUID variantId)
     {
         List<ProductImageEntity> images = getEntityManager().createQuery(
@@ -104,20 +90,14 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
         return images.isEmpty() ? null : images.get(0);
     }
 
-    /**
-     * Find a featured image for a product
-     */
     public ProductImageEntity findFeaturedByProductId(UUID productId)
     {
         return find("productVariant.product.id = ?1 AND isFeatured = true", productId).firstResult();
     }
 
-    /**
-     * Update the featured image for a product (set one image as featured, unfeature others)
-     */
     public void setFeaturedImage(UUID productId, UUID imageId)
     {
-        // Unfeature all images for this product
+        // Nonfeature all images for this product
         update("isFeatured = false WHERE productVariant.product.id = ?1", productId);
 
         // Feature the specific image

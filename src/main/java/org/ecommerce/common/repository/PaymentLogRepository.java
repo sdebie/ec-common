@@ -16,16 +16,7 @@ public class PaymentLogRepository extends BaseRepository<PaymentLogEntity, UUID>
         return PaymentLogEntity.class;
     }
 
-    /**
-     * Records a payment-gateway callback. {@code order} may be null when the
-     * callback's own order reference can't be resolved to a real order — the row
-     * is still kept for the raw audit trail, just unlinked.
-     * <p>
-     * Caller must already hold a transaction; the row is persisted immediately.
-     */
-    public PaymentLogEntity record(OrderEntity order, String gatewayName, String internalReference,
-                                    String externalReference, BigDecimal amountGross, String status,
-                                    String rawResponse)
+    public PaymentLogEntity record(OrderEntity order, String gatewayName, String internalReference, String externalReference, BigDecimal amountGross, String status, String rawResponse)
     {
         PaymentLogEntity log = new PaymentLogEntity();
         log.setOrderEntity(order);

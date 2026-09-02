@@ -9,22 +9,7 @@ import java.util.UUID;
 @ApplicationScoped
 public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
 {
-    /**
-     * {@code allCategories}/{@code getCategories}/{@code categoryCount} carry no
-     * {@code @RolesAllowed} at all, so this allowlist is the only gate on an otherwise
-     * fully anonymous filter. {@code CategoryEntity} holds no secret data at any depth — the
-     * risk here is unbounded traversal, not disclosure — so {@code parent} (self-referential)
-     * is allowed only as the specific leaf paths {@code CategoryService}'s root-category
-     * scoping and a plausible "filter by parent name/slug" need, never as the bare relation
-     * name Hibernate would otherwise let a caller keep chaining through indefinitely.
-     * {@code products} (a {@code ManyToMany} with no {@link
-     * org.ecommerce.common.query.PanacheQueryBuilder.CollectionExistsRewrite} registered
-     * here) is excluded entirely — nothing uses it today, and unlike {@code ProductRepository}
-     * this repository has no safe rewrite for a to-many path.
-     */
-    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of(
-            "id", "name", "slug", "description", "imageUrl",
-            "parent.id", "parent.name", "parent.slug");
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of("id", "name", "slug", "description", "imageUrl", "parent.id", "parent.name", "parent.slug");
 
     @Override
     protected Class<CategoryEntity> getEntityClass()
