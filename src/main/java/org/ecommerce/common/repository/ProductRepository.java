@@ -6,7 +6,6 @@ import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.enums.*;
 import org.ecommerce.common.query.*;
-import org.ecommerce.common.query.enums.FilterOperator;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -240,10 +239,13 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return query;
     }
 
-    public List<ProductEntity> findTopBestSellerEntities()
+    /**
+     * The {@code limit} products with the most units sold in DELIVERED orders, most first.
+     * Only ever as many as actually qualify — whether/how to fill a shorter list out to a
+     * display target is a presentation decision for the caller, not this query.
+     */
+    public List<ProductEntity> findTopBestSellerEntities(int limit)
     {
-        final int TARGET = 10;
-
         List<Object[]> rows = getEntityManager()
                 .createQuery(
                         "select oi.variant.product.id, sum(oi.quantity) as total " +
@@ -255,23 +257,14 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                                 "order by total desc",
                         Object[].class)
                 .setParameter("status", OrderStatusEn.DELIVERED)
-                .setMaxResults(TARGET)
+                .setMaxResults(limit)
                 .getResultList();
 
         List<UUID> bestSellerIds = rows.stream()
                 .map(row -> (UUID) row[0])
                 .collect(Collectors.toList());
 
-        List<ProductEntity> bestSellers = fetchProductsByIds(bestSellerIds);
-
-        List<ProductEntity> result = new ArrayList<>(bestSellers);
-        if (result.size() < TARGET) {
-            int needed = TARGET - result.size();
-            List<ProductEntity> random = findRandomProductEntitiesExcluding(needed, bestSellerIds);
-            result.addAll(random);
-        }
-
-        return result;
+        return fetchProductsByIds(bestSellerIds);
     }
 
     private List<ProductEntity> fetchProductsByIds(List<UUID> ids)
@@ -297,7 +290,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 .collect(Collectors.toList());
     }
 
-    private List<ProductEntity> findRandomProductEntitiesExcluding(int limit, List<UUID> excludeIds)
+    public List<ProductEntity> findRandomProductEntitiesExcluding(int limit, List<UUID> excludeIds)
     {
         TypedQuery<ProductEntity> q;
         if (excludeIds == null || excludeIds.isEmpty()) {
@@ -366,27 +359,29 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
     {
     }
 
+    /**
+     * Builds the admin product WHERE clause straight from these four typed params — no detour
+     * through a self-built {@link FilterRequest}/{@link PanacheQueryBuilder}, since nothing
+     * external ever supplies one here. The category clause is hand-written as the same EXISTS
+     * subquery {@link PanacheQueryBuilder.CollectionExistsRewrite} would generate for it (a
+     * to-many association can't be filtered with a plain {@code = } without multiplying rows).
+     */
     private AdminProductFilter buildAdminProductFilter(String status, String categoryId, String brandId, String search)
     {
-        List<Filter> filters = new ArrayList<>();
+        List<String> clauses = new ArrayList<>();
+        Map<String, Object> params = new LinkedHashMap<>();
+
         if (status != null && !status.isBlank()) {
-            filters.add(new Filter("status", FilterOperator.EQUALS, ProductStatusEn.valueOf(status).name()));
+            clauses.add("p.status = :status");
+            params.put("status", ProductStatusEn.valueOf(status));
         }
         if (categoryId != null && !categoryId.isBlank()) {
-            filters.add(new Filter("category.id", FilterOperator.EQUALS, UUID.fromString(categoryId).toString()));
+            clauses.add("EXISTS (SELECT 1 FROM CategoryEntity category WHERE category MEMBER OF p.categories AND category.id = :categoryId)");
+            params.put("categoryId", UUID.fromString(categoryId));
         }
         if (brandId != null && !brandId.isBlank()) {
-            filters.add(new Filter("brand.id", FilterOperator.EQUALS, UUID.fromString(brandId).toString()));
-        }
-
-        FilterRequest filterRequest = new FilterRequest();
-        filterRequest.setFilters(filters);
-        PanacheQueryBuilder queryBuilder = buildQueryBuilder(filterRequest);
-
-        List<String> clauses = new ArrayList<>();
-        Map<String, Object> params = new LinkedHashMap<>(queryBuilder.params());
-        if (queryBuilder.hasQuery()) {
-            clauses.add(queryBuilder.query());
+            clauses.add("p.brand.id = :brandId");
+            params.put("brandId", UUID.fromString(brandId));
         }
 
         if (search != null && !search.isBlank()) {

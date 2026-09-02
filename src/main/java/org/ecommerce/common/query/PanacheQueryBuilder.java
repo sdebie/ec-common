@@ -44,21 +44,6 @@ public class PanacheQueryBuilder
     private Sort builtSort;
     private Map<String, Object> builtParams;
 
-    public PanacheQueryBuilder(FilterRequest filterRequest)
-    {
-        this(filterRequest, null, null, null);
-    }
-
-    public PanacheQueryBuilder(FilterRequest filterRequest, Class<?> entityClass)
-    {
-        this(filterRequest, entityClass, null, null);
-    }
-
-    public PanacheQueryBuilder(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite)
-    {
-        this(filterRequest, entityClass, collectionRewrite, null);
-    }
-
     /**
      * @param allowedFields the exact set of JPQL field-path strings (plain columns or dotted
      *                       association paths) a caller may filter or sort by, or {@code null}
@@ -75,26 +60,6 @@ public class PanacheQueryBuilder
         this.entityClass = entityClass;
         this.collectionRewrite = collectionRewrite;
         this.allowedFields = allowedFields;
-    }
-
-    public static PanacheQueryBuilder from(FilterRequest filterRequest)
-    {
-        return new PanacheQueryBuilder(filterRequest, null, null, null).build();
-    }
-
-    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass)
-    {
-        return new PanacheQueryBuilder(filterRequest, entityClass, null, null).build();
-    }
-
-    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite)
-    {
-        return new PanacheQueryBuilder(filterRequest, entityClass, collectionRewrite, null).build();
-    }
-
-    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass, Set<String> allowedFields)
-    {
-        return new PanacheQueryBuilder(filterRequest, entityClass, null, allowedFields).build();
     }
 
     public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite, Set<String> allowedFields)
@@ -253,6 +218,12 @@ public class PanacheQueryBuilder
                 bind(p, enumType != null ? coerceToEnumList(filter.getValues(), enumType) : coerceList(filter.getValues()));
                 yield field + " NOT IN (:" + p + ")";
             }
+            case BETWEEN -> {
+                yield field + " BETWEEN :" + p + " AND :" + bindBetweenBounds(p, filter, enumType);
+            }
+            case NOT_BETWEEN -> {
+                yield field + " NOT BETWEEN :" + p + " AND :" + bindBetweenBounds(p, filter, enumType);
+            }
             case LIKE -> {
                 bind(p, "%" + filter.getValue() + "%");
                 yield field + " LIKE :" + p;
@@ -286,6 +257,28 @@ public class PanacheQueryBuilder
     private void bind(String key, Object value)
     {
         paramMap.put(key, value);
+    }
+
+    /**
+     * Binds a BETWEEN/NOT_BETWEEN filter's two bounds — {@code fromParam} (already reserved by
+     * the caller) and a freshly-generated second param name, which this returns so the caller
+     * can splice it into the JPQL. Requires exactly two values, the same list {@link
+     * Filter#getValues} already carries for IN/NOT_IN.
+     */
+    @SuppressWarnings("rawtypes")
+    private String bindBetweenBounds(String fromParam, Filter filter, Class<? extends Enum> enumType)
+    {
+        List<Object> bounds = enumType != null
+                ? coerceToEnumList(filter.getValues(), enumType)
+                : coerceList(filter.getValues());
+        if (bounds.size() != 2) {
+            throw new IllegalArgumentException("BETWEEN/NOT_BETWEEN requires exactly two values for \"" + filter.getKey() + "\"");
+        }
+
+        String toParam = "p" + seq++;
+        bind(fromParam, bounds.get(0));
+        bind(toParam, bounds.get(1));
+        return toParam;
     }
 
     /**

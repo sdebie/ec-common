@@ -3,8 +3,6 @@ package org.ecommerce.common.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.StoreSettingsEntity;
 
-import java.util.List;
-
 @ApplicationScoped
 public class StoreSettingsRepository extends BaseRepository<StoreSettingsEntity, String>
 {
@@ -13,15 +11,5 @@ public class StoreSettingsRepository extends BaseRepository<StoreSettingsEntity,
     protected Class<StoreSettingsEntity> getEntityClass()
     {
         return StoreSettingsEntity.class;
-    }
-
-    public List<StoreSettingsEntity> getAllStoreSettings()
-    {
-        return listAll();
-    }
-
-    public void saveStoreSettings(StoreSettingsEntity entity)
-    {
-        getEntityManager().merge(entity);
     }
 }

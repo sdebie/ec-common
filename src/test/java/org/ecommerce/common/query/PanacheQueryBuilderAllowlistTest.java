@@ -48,7 +48,7 @@ class PanacheQueryBuilderAllowlistTest
     @Test
     void nullAllowlistPermitsAnyField()
     {
-        PanacheQueryBuilder builder = PanacheQueryBuilder.from(withFilter("anything.at.all", FilterOperator.EQUALS, "x"));
+        PanacheQueryBuilder builder = PanacheQueryBuilder.from(withFilter("anything.at.all", FilterOperator.EQUALS, "x"), null, null, null);
         assertEquals("anything.at.all = :p0", builder.query());
     }
 
@@ -59,14 +59,14 @@ class PanacheQueryBuilderAllowlistTest
     {
         FilterRequest request = withFilter("status", FilterOperator.EQUALS, "ACTIVE");
         assertThrows(IllegalArgumentException.class,
-                () -> PanacheQueryBuilder.from(request, null, Set.of()));
+                () -> PanacheQueryBuilder.from(request, null, null, Set.of()));
     }
 
     @Test
     void emptyAllowlistFallsBackToDefaultSortInsteadOfThrowing()
     {
         FilterRequest request = withSort("status");
-        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, Set.of());
+        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, null, Set.of());
         assertEquals("[id]", sortColumnNames(builder.sort()));
     }
 
@@ -76,7 +76,7 @@ class PanacheQueryBuilderAllowlistTest
     void allowlistedFieldIsPermittedAsFilter()
     {
         FilterRequest request = withFilter("status", FilterOperator.EQUALS, "ACTIVE");
-        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, Set.of("status"));
+        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, null, Set.of("status"));
         assertEquals("status = :p0", builder.query());
         assertEquals("ACTIVE", builder.params().get("p0"));
     }
@@ -85,7 +85,7 @@ class PanacheQueryBuilderAllowlistTest
     void allowlistedFieldIsPermittedAsSort()
     {
         FilterRequest request = withSort("status");
-        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, Set.of("status"));
+        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, null, Set.of("status"));
         assertEquals("[status]", sortColumnNames(builder.sort()));
     }
 
@@ -98,7 +98,7 @@ class PanacheQueryBuilderAllowlistTest
     {
         FilterRequest request = withFilter("user.passwordResetCodeHash", FilterOperator.ILIKE, "a");
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> PanacheQueryBuilder.from(request, null, Set.of("user.email")));
+                () -> PanacheQueryBuilder.from(request, null, null, Set.of("user.email")));
         assertEquals("Filtering by \"user.passwordResetCodeHash\" is not permitted", ex.getMessage());
     }
 
@@ -109,7 +109,7 @@ class PanacheQueryBuilderAllowlistTest
         // default rather than erroring — see PanacheQueryBuilder.buildSort's own reasoning:
         // there's a sensible fallback for sort where there isn't one for a dropped filter.
         FilterRequest request = withSort("user.passwordResetCodeHash");
-        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, Set.of("user.email"));
+        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, null, Set.of("user.email"));
         assertEquals("[id]", sortColumnNames(builder.sort()));
     }
 
@@ -123,7 +123,7 @@ class PanacheQueryBuilderAllowlistTest
         allowed.setField("status");
         request.setSort(List.of(disallowed, allowed));
 
-        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, Set.of("status"));
+        PanacheQueryBuilder builder = PanacheQueryBuilder.from(request, null, null, Set.of("status"));
         assertEquals("[status]", sortColumnNames(builder.sort()));
     }
 
@@ -135,7 +135,7 @@ class PanacheQueryBuilderAllowlistTest
         FilterRequest isNotNullRequest = new FilterRequest();
         isNotNullRequest.setFilters(List.of(new Filter("user.mfaEnabled", FilterOperator.IS_NOT_NULL, (String) null)));
         assertThrows(IllegalArgumentException.class,
-                () -> PanacheQueryBuilder.from(isNotNullRequest, null, Set.of("status")));
+                () -> PanacheQueryBuilder.from(isNotNullRequest, null, null, Set.of("status")));
     }
 
     // --- A CollectionExistsRewrite-eligible key is still checked against the allowlist ---

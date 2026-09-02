@@ -19,14 +19,4 @@ public class ShippingMethodRepository extends BaseRepository<ShippingMethodEntit
     {
         return list("isActive", true);
     }
-
-    public ShippingMethodEntity save(ShippingMethodEntity entity)
-    {
-        if (entity.getId() == null) {
-            entity.persist();
-            return entity;
-        } else {
-            return getEntityManager().merge(entity);
-        }
-    }
 }
