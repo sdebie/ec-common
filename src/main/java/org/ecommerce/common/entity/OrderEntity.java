@@ -20,7 +20,6 @@ import java.util.UUID;
 @Table(name = "orders")
 public class OrderEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -127,7 +126,7 @@ public class OrderEntity extends PanacheEntityBase
      */
     public String getReference()
     {
-        return id == null ? null : "ORD-" + id.toString().substring(0, 8).toUpperCase();
+        return getId() == null ? null : "ORD-" + getId().toString().substring(0, 8).toUpperCase();
     }
 
     /**
@@ -152,48 +151,6 @@ public class OrderEntity extends PanacheEntityBase
         String joined = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
         return joined.isEmpty() ? null : joined;
     }
-
-    // Finder methods to return fully-hydrated orders (customer + order_items)
-    public static OrderEntity findOrderInfoById(UUID id)
-    {
-        if (id == null)
-            throw new IllegalArgumentException("id must not be null");
-        return find("select distinct o from OrderEntity o left join fetch o.customerEntity left join fetch o.items where o.id = ?1", id)
-                .firstResult();
-    }
-
-    /**
-     * Resolves an order by its checkout idempotency key, joining every
-     * association {@code replayOrder}/{@code computeTotals} touch —
-     * deliberately more than {@link #findOrderInfoById}'s set. This runs
-     * outside a transaction (design §3.3), so a lazy association left
-     * unjoined here is a hard failure, not a slow one: {@code items.variant}
-     * and {@code variant.product} for each line's name and id, and
-     * {@code shippingMethod} for the totals a replay recomputes.
-     */
-    public static OrderEntity findByIdempotencyKey(UUID key)
-    {
-        if (key == null)
-            throw new IllegalArgumentException("key must not be null");
-        return find("""
-                select distinct o from OrderEntity o
-                  left join fetch o.customerEntity
-                  left join fetch o.items i
-                  left join fetch i.variant v
-                  left join fetch v.product
-                  left join fetch o.shippingMethod
-                where o.idempotencyKey = ?1
-                """, key).firstResult();
-    }
-
-    public static OrderEntity findLatestOrderInfoBySessionId(UUID sessionId)
-    {
-        if (sessionId == null)
-            throw new IllegalArgumentException("sessionId must not be null");
-        return find("select distinct o from OrderEntity o left join fetch o.customerEntity left join fetch o.items where o.sessionId = ?1 order by o.createdAt desc", sessionId)
-                .firstResult();
-    }
-
 
     /**
      * Total units on the order, not the number of distinct lines. Staff read this as

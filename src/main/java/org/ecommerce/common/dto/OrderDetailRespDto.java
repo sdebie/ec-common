@@ -14,10 +14,10 @@ import java.util.UUID;
 /**
  * The shopper-facing order-detail shape ({@code getOrderDetail} — guest-order-authorization
  * S1). Deliberately carries no {@code sessionId}: that field is {@code orderBySessionId}'s
- * credential, and this response used to hand it out to anyone who could read one order,
- * closing S1 without closing S2 (Requirement 4.1). Its {@code statusHistory} rows carry no
- * {@code changedBy} either — staff members' real names — because this surface no longer
- * admits a staff caller at all (Requirement 1.6/4.4).
+ * credential, and exposing it here would let anyone who can read one order read every
+ * order through it — closing S1 alone, not S2 (Requirement 4.1). Its {@code statusHistory}
+ * rows carry no {@code changedBy} either — staff members' real names — because this surface
+ * admits no staff caller, which is what closes S2 (Requirement 1.6/4.4).
  */
 @Getter
 @Setter

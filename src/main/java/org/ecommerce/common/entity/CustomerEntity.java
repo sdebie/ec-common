@@ -26,7 +26,6 @@ import java.util.UUID;
 @Table(name = "customers")
 public class CustomerEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -59,20 +58,11 @@ public class CustomerEntity extends PanacheEntityBase
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomerContactEntity> contacts = new ArrayList<>();
 
-    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private WholesaleProfileEntity wholesaleProfile;
 
-    @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderEntity> orderEntities;
-
-    /**
-     * Finds a customer by the email stored on the linked {@link UserEntity}.
-     */
-    public static CustomerEntity findByEmail(String email)
-    {
-        return find("lower(user.email) = lower(?1)", email).firstResult();
-    }
-
 
     /**
      * The customer's physical address, or null when none has been captured.

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
 
@@ -16,6 +17,8 @@ public class ProductImportStagedEntity extends PanacheEntityBase
 {
     @Id
     @GeneratedValue
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
     @ManyToOne

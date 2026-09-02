@@ -20,7 +20,6 @@ import java.util.UUID;
 @Table(name = "products")
 public class ProductEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator

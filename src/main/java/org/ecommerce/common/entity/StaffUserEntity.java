@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.StaffRoleEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -18,7 +19,9 @@ public class StaffUserEntity extends PanacheEntityBase
 {
     @Id
     @GeneratedValue
-    private UUID id; // Using UUID as requested
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -26,21 +29,8 @@ public class StaffUserEntity extends PanacheEntityBase
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "full_name")
-    private String fullName;
-
-    @Enumerated(EnumType.STRING) // Stores the name (e.g., 'CATALOG_MANAGER') in DB
-    @Column(nullable = false)
-    private StaffRoleEn role;
-
     @Column(name = "is_active")
     private boolean isActive = true;
-
-    @Column(name = "reset_password")
-    private boolean resetPassword = false;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "password_reset_code_hash")
     private String passwordResetCodeHash;
@@ -54,9 +44,19 @@ public class StaffUserEntity extends PanacheEntityBase
     @Column(name = "password_reset_code_locked_until")
     private OffsetDateTime passwordResetCodeLockedUntil;
 
-    // Helper method for login and admin lookups
-    public static StaffUserEntity findByEmail(String email)
-    {
-        return find("lower(email) = lower(?1)", email).firstResult();
-    }
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Enumerated(EnumType.STRING) // Stores the name (e.g., 'CATALOG_MANAGER') in DB
+    @Column(nullable = false)
+    private StaffRoleEn role;
+
+    @Column(name = "reset_password")
+    private boolean resetPassword = false;
+
+    // staff_users.created_at is a plain TIMESTAMP (no timezone), unlike users.created_at
+    // (TIMESTAMPTZ) — the two are typed differently for that reason (LocalDateTime here,
+    // OffsetDateTime on UserEntity).
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -18,7 +18,6 @@ import java.util.UUID;
 @NoArgsConstructor
 public class ProductImageEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator

@@ -9,7 +9,6 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,21 +51,6 @@ public class ProductVariantEntity extends PanacheEntityBase
     @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC") // Automatically keeps your images sorted for the storefront
     private List<ProductImageEntity> images = new ArrayList<>();
-
-    // Helper method to fetch a variant together with its Product entity
-    public static ProductVariantEntity findByIdWithProduct(UUID id)
-    {
-        if (id == null) return null;
-        return find("select v from ProductVariantEntity v left join fetch v.product where v.id = ?1", id).firstResult();
-    }
-
-    // Helper to fetch all variants for a given product id including the product relation
-    public static List<ProductVariantEntity> listByProductIdWithProduct(UUID productId)
-    {
-        if (productId == null) return Collections.emptyList();
-        return list("select v from ProductVariantEntity v left join fetch v.product where v.product.id = ?1 order by v.id asc", productId);
-    }
-
 
     /**
      * The image that stands for this variant: the one flagged featured, else the first by

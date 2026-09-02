@@ -4,9 +4,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.entity.OrderEntity;
 import org.ecommerce.common.entity.OrderItemEntity;
+import org.ecommerce.common.entity.ProductImageEntity;
 import org.ecommerce.common.entity.ProductVariantEntity;
 import org.ecommerce.common.enums.OrderStatusEn;
-import org.ecommerce.common.query.FieldNameValidator;
 import org.ecommerce.common.query.FilterRequest;
 import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
@@ -14,14 +14,29 @@ import org.ecommerce.common.query.enums.SortDirection;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 {
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of(
+            "id", "status", "createdAt", "totalAmount", "vatAmount", "shippingCost",
+            "contactEmail", "contactFirstName", "contactLastName",
+            "city", "province", "postalCode", "trackingNumber", "trackingCarrier",
+            "customerEntity.id", "customerEntity.firstName", "customerEntity.lastName",
+            "customerEntity.status", "customerEntity.shopperType",
+            "shippingMethod.id", "shippingMethod.name");
+
     @Override
     protected Class<OrderEntity> getEntityClass()
     {
         return OrderEntity.class;
+    }
+
+    @Override
+    protected Set<String> filterableFields()
+    {
+        return ALLOWED_FILTER_FIELDS;
     }
 
     public OrderEntity findOrderInfoById(UUID id)
@@ -30,16 +45,38 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             throw new IllegalArgumentException("id must not be null");
         }
 
-        List<OrderEntity> results = find("select distinct o from OrderEntity o " +
+        OrderEntity order = find("select o from OrderEntity o " +
                 "left join fetch o.customerEntity " +
-                "left join fetch o.items i " +
-                "left join fetch i.variant v " +
-                "left join fetch v.product " +
                 "where o.id = ?1", id)
-                .list();
+                .firstResult();
 
-        OrderEntity order = results.isEmpty() ? null : results.get(0);
+        if (order == null) {
+            return null;
+        }
+
+        attachItems(List.of(order));
         hydrateVariantImages(order);
+        return order;
+    }
+
+    public OrderEntity findByIdempotencyKey(UUID key)
+    {
+        if (key == null) {
+            throw new IllegalArgumentException("key must not be null");
+        }
+
+        OrderEntity order = find("""
+                select o from OrderEntity o
+                  left join fetch o.customerEntity
+                  left join fetch o.shippingMethod
+                where o.idempotencyKey = ?1
+                """, key).firstResult();
+
+        if (order == null) {
+            return null;
+        }
+
+        attachItems(List.of(order));
         return order;
     }
 
@@ -64,6 +101,31 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return findOrderInfoById(latestOrderId);
     }
 
+    private void attachItems(List<OrderEntity> orders)
+    {
+        if (orders == null || orders.isEmpty()) return;
+
+        List<UUID> orderIds = orders.stream().map(OrderEntity::getId).collect(Collectors.toList());
+
+        List<OrderItemEntity> items = getEntityManager()
+                .createQuery("select i from OrderItemEntity i " +
+                        "left join fetch i.variant v " +
+                        "left join fetch v.product " +
+                        "where i.orderEntity.id in :orderIds", OrderItemEntity.class)
+                .setParameter("orderIds", orderIds)
+                .getResultList();
+
+        Map<UUID, List<OrderItemEntity>> itemsByOrderId = new HashMap<>();
+        for (OrderItemEntity item : items) {
+            itemsByOrderId.computeIfAbsent(item.getOrderEntity().getId(), k -> new ArrayList<>()).add(item);
+        }
+
+        for (OrderEntity order : orders) {
+            order.getItems().clear();
+            order.getItems().addAll(itemsByOrderId.getOrDefault(order.getId(), List.of()));
+        }
+    }
+
     private void hydrateVariantImages(OrderEntity order)
     {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
@@ -81,12 +143,25 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return;
         }
 
-        // Fetch only variant->images in a dedicated query to avoid multiple bag fetch in one select.
-        getEntityManager().createQuery(
-                        "select distinct v from ProductVariantEntity v left join fetch v.images where v.id in :variantIds",
-                        ProductVariantEntity.class)
+        List<ProductImageEntity> images = getEntityManager()
+                .createQuery("select img from ProductImageEntity img " +
+                        "where img.productVariant.id in :variantIds " +
+                        "order by img.productVariant.id, img.sortOrder asc", ProductImageEntity.class)
                 .setParameter("variantIds", variantIds)
                 .getResultList();
+
+        Map<UUID, List<ProductImageEntity>> imagesByVariantId = new HashMap<>();
+        for (ProductImageEntity image : images) {
+            imagesByVariantId.computeIfAbsent(image.getProductVariant().getId(), k -> new ArrayList<>()).add(image);
+        }
+
+        for (UUID variantId : variantIds) {
+            ProductVariantEntity variant = getEntityManager().find(ProductVariantEntity.class, variantId);
+            if (variant != null) {
+                variant.getImages().clear();
+                variant.getImages().addAll(imagesByVariantId.getOrDefault(variantId, List.of()));
+            }
+        }
     }
 
     public List<OrderEntity> findAllOrderInfo(PageRequest pageRequest, FilterRequest filterRequest)
@@ -113,45 +188,16 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return hydratedOrders;
     }
 
-    /**
-     * The columns an admin can sort the order list by. Every other row field — reference,
-     * the placed-by name, item count — is derived rather than stored ({@link OrderEntity}'s
-     * own {@code getReference()}/{@code getPlacedByName()}/{@code totalUnits()}), so there is
-     * no single JPQL property an ORDER BY could name for them.
-     */
     private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "totalAmount", "status");
 
-    /**
-     * One page of orders for the admin list, hydrated with the customer and line items the
-     * list row needs, ordered per {@code sort} — or newest-first when {@code sort} is null,
-     * blank, or names a field outside {@link #ADMIN_SORTABLE_FIELDS}. A silent fallback
-     * rather than a thrown error, matching {@code PanacheQueryBuilder}'s own default-sort
-     * behaviour: an unresolvable sort request is not a malformed query, it is a request for
-     * "however you'd normally order these".
-     * <p>
-     * Hand-written rather than routed through {@link FilterRequest}: that path
-     * coerces a filter value to boolean/UUID/Long/Double/String only, so a
-     * {@code createdAt} bound would bind a String against a timestamp column
-     * and fail. The date range is the whole point of this query. The field name is still
-     * validated through the shared {@link FieldNameValidator} PanacheQueryBuilder itself
-     * uses, and further narrowed to a fixed whitelist — a raw-JPQL ORDER BY has no query
-     * planner to fail closed for it the way a Hibernate-managed one does, so a wrong name
-     * here fails at execution as a raw SQL error rather than a controlled one.
-     *
-     * @param from inclusive lower bound, or null for no lower bound
-     * @param to   exclusive upper bound, or null for no upper bound
-     */
     public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, SortRequest sort, PageRequest pageRequest)
     {
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
         Map<String, Object> params = new LinkedHashMap<>();
         String where = adminWhereClause(statuses, from, to, params);
 
-        // Page over ids alone. A bag fetch of o.items cannot be paged in SQL, so
-        // combining the fetch with setMaxResults would make Hibernate page in
-        // memory over the entire result set.
         TypedQuery<UUID> idQuery = getEntityManager()
-                .createQuery("select o.id from OrderEntity o" + where + adminOrderByClause(sort), UUID.class)
+                .createQuery("select o.id from OrderEntity o" + where + adminOrderByClause(sort, ADMIN_SORTABLE_FIELDS, "o", "createdAt"), UUID.class)
                 .setFirstResult(page.getOffset())
                 .setMaxResults(page.getPageSize());
         params.forEach(idQuery::setParameter);
@@ -162,14 +208,13 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         List<OrderEntity> hydrated = getEntityManager()
-                .createQuery("select distinct o from OrderEntity o "
+                .createQuery("select o from OrderEntity o "
                         + "left join fetch o.customerEntity "
-                        + "left join fetch o.items "
                         + "where o.id in :ids", OrderEntity.class)
                 .setParameter("ids", ids)
                 .getResultList();
+        attachItems(hydrated);
 
-        // An IN-clause does not preserve the id order, so re-impose the page's.
         Map<UUID, OrderEntity> byId = new LinkedHashMap<>();
         for (OrderEntity order : hydrated) {
             byId.put(order.getId(), order);
@@ -185,9 +230,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return ordered;
     }
 
-    /**
-     * Total matching {@link #findForAdmin} under the same filters, for paging.
-     */
     public long countForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to)
     {
         Map<String, Object> params = new LinkedHashMap<>();
@@ -200,14 +242,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return query.getSingleResult();
     }
 
-    /**
-     * Builds the shared WHERE clause and fills {@code params} with its bindings.
-     *
-     * @param statuses the statuses to match, or null for every status. An <em>empty</em>
-     *                 collection is not the same thing: it means the caller's filters
-     *                 admit nothing, and callers short-circuit on it rather than passing
-     *                 it here, since {@code in ()} is not valid SQL.
-     */
     private String adminWhereClause(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, Map<String, Object> params)
     {
         List<String> clauses = new ArrayList<>();
@@ -226,19 +260,6 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
 
         return clauses.isEmpty() ? "" : " where " + String.join(" and ", clauses);
-    }
-
-    private String adminOrderByClause(SortRequest sort)
-    {
-        String field = "createdAt";
-        boolean descending = true;
-
-        if (sort != null && sort.getField() != null && ADMIN_SORTABLE_FIELDS.contains(sort.getField())) {
-            field = sort.getField();
-            descending = sort.getDirection() != SortDirection.ASC;
-        }
-
-        return " order by o." + FieldNameValidator.validate(field) + (descending ? " desc" : " asc");
     }
 
     private FilterRequest withDefaultCreatedAtSort(FilterRequest filterRequest)

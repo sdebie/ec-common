@@ -212,12 +212,8 @@ public enum OrderStatusEn {
             case DELIVERED, COLLECTED -> CustomerNotification.COMPLETED;
             case DELIVERY_FAILED, RETURNED_TO_ORIGIN -> CustomerNotification.DELIVERY_PROBLEM;
 
-            // However an order ended, the shopper needs the same thing: confirmation that
-            // it is over. Which side ended it belongs on the timeline, not in their inbox —
-            // and that is exactly why FAILED belongs here too. It is too vague a word to
-            // put in front of a shopper, but an order that ends in it has still ended, and
-            // silence would leave them waiting for something that is never coming. They get
-            // the same plain "cancelled, and refunded if you paid" as any other ending.
+            // Which side ended the order belongs on the timeline, not the inbox — so
+            // however it ended, the shopper gets the same plain notice as any other ending.
             case USER_CANCELED, ADMIN_CANCELED, SYSTEM_CANCELED, CANCELLED, FAILED -> CustomerNotification.ENDED;
 
             case REFUNDED, PARTIALLY_REFUNDED -> CustomerNotification.REFUNDED;
