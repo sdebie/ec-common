@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.QuoteRequestStatusEn;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -22,4 +23,7 @@ public class QuoteRequestDetailsDto
     private QuoteRequestStatusEn status;
     private Instant statusChangedAt;
     private List<QuoteRequestItemDto> items;
+    private BigDecimal quotedAmount;
+    private String quotedNotes;
+    private String quotedByName;
 }

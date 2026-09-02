@@ -1,8 +1,6 @@
 package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.ecommerce.common.entity.CountrySettingsEntity;
-import org.ecommerce.common.entity.ShippingMethodEntity;
 import org.ecommerce.common.entity.StoreSettingsEntity;
 
 import java.util.List;
@@ -19,31 +17,11 @@ public class SettingsRepository extends BaseRepository<StoreSettingsEntity, Stri
 
     public List<StoreSettingsEntity> getAllStoreSettings()
     {
-        return StoreSettingsEntity.listAll();
-    }
-
-    public List<ShippingMethodEntity> getAllShippingMethods()
-    {
-        return ShippingMethodEntity.listAll();
-    }
-
-    public List<CountrySettingsEntity> getAllCountrySettings()
-    {
-        return CountrySettingsEntity.listAll();
+        return listAll();
     }
 
     public void saveStoreSettings(StoreSettingsEntity entity)
     {
         getEntityManager().merge(entity);
-    }
-
-    public ShippingMethodEntity saveShippingMethod(ShippingMethodEntity entity)
-    {
-        if (entity.getId() == null) {
-            entity.persist();
-            return entity;
-        } else {
-            return getEntityManager().merge(entity);
-        }
     }
 }

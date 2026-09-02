@@ -8,7 +8,6 @@ import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.PageRequest;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -40,9 +39,6 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 .firstResult();
     }
 
-    /**
-     * Fetch a single variant together with its parent Product entity.
-     */
     public ProductVariantEntity findByIdWithProduct(UUID id)
     {
         if (id == null) return null;
@@ -50,18 +46,12 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 .firstResult();
     }
 
-    /**
-     * Fetch multiple variants (by ID list) together with their parent Product entities.
-     */
     public List<ProductVariantEntity> findByIdsWithProduct(List<UUID> ids)
     {
         if (ids == null || ids.isEmpty()) return Collections.emptyList();
         return list("select v from ProductVariantEntity v left join fetch v.product where v.id in ?1", ids);
     }
 
-    /**
-     * Fetch all variants for a given product together with the parent Product entity.
-     */
     public List<ProductVariantEntity> findByVariantsForProductId(UUID productId)
     {
         if (productId == null) return Collections.emptyList();
@@ -70,10 +60,6 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
                 productId);
     }
 
-    /**
-     * Fetches the variants for a page of products in one query.  List assemblers
-     * use this instead of issuing a variant/count query for every product.
-     */
     public List<ProductVariantEntity> findForProductIds(List<UUID> productIds, boolean ignoreStatus)
     {
         if (productIds == null || productIds.isEmpty()) {
@@ -93,10 +79,6 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return typedQuery.getResultList();
     }
 
-    /**
-     * Fetch all variants that carry an active RETAIL_SALE_PRICE or WHOLESALE_SALE_PRICE.
-     * Eagerly loads the parent product and its categories to avoid N+1 queries.
-     */
     public List<ProductVariantEntity> findOnSaleVariants(PageRequest pageRequest)
     {
         LocalDateTime now = LocalDateTime.now();
@@ -106,15 +88,15 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
 
         return find(
                 "select v from ProductVariantEntity v " +
-                "left join fetch v.product p " +
-                "left join fetch p.categories " +
-                "where v.id in (" +
-                "  select v2.id from ProductVariantEntity v2 " +
-                "  join VariantPricesEntity vp on vp.variant = v2 " +
-                "  where vp.priceType in ?1 " +
-                "  and (vp.priceStartDate is null or vp.priceStartDate <= ?2) " +
-                "  and (vp.priceEndDate is null or vp.priceEndDate >= ?2)" +
-                ")",
+                        "left join fetch v.product p " +
+                        "left join fetch p.categories " +
+                        "where v.id in (" +
+                        "  select v2.id from ProductVariantEntity v2 " +
+                        "  join VariantPricesEntity vp on vp.variant = v2 " +
+                        "  where vp.priceType in ?1 " +
+                        "  and (vp.priceStartDate is null or vp.priceStartDate <= ?2) " +
+                        "  and (vp.priceEndDate is null or vp.priceEndDate >= ?2)" +
+                        ")",
                 Sort.by("sku"),
                 salePriceTypes,
                 now)
@@ -125,7 +107,6 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     }
 
 
-    /** Number of variants for a product; ACTIVE-only unless {@code ignoreStatus}. */
     public int countForProduct(UUID productId, boolean ignoreStatus)
     {
         String q = "SELECT COUNT(v.id) FROM ProductVariantEntity v WHERE v.product.id = :productId " +
@@ -138,7 +119,9 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return count == null ? 0 : count.intValue();
     }
 
-    /** First variant id (by id ASC) for a product; ACTIVE-only unless {@code ignoreStatus}. */
+    /**
+     * First variant id (by id ASC) for a product; ACTIVE-only unless {@code ignoreStatus}.
+     */
     public String findFirstVariantId(UUID productId, boolean ignoreStatus)
     {
         String q = "SELECT v.id FROM ProductVariantEntity v WHERE v.product.id = :productId " +
@@ -154,7 +137,9 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
         return ids.isEmpty() ? null : ids.get(0).toString();
     }
 
-    /** Aggregated stock across all variants of a product. */
+    /**
+     * Aggregated stock across all variants of a product.
+     */
     public int sumStock(UUID productId)
     {
         Long total = getEntityManager().createQuery(
@@ -181,18 +166,32 @@ public class ProductVariantRepository extends BaseRepository<ProductVariantEntit
     }
 
     /**
-     * Fetch all ACTIVE variants for a given product (excludes DISABLED).
-     * Used by admin-edit and storefront-detail reads so that soft-deleted variants
-     * are absent after save.
+     * Fetch ACTIVE-only variants for a given product (excludes PENDING and DISABLED).
+     * Used by the public storefront-detail read so an unpublished (PENDING) or
+     * soft-deleted (DISABLED) variant is never customer-visible.
      */
     public List<ProductVariantEntity> findActiveVariantsForProductId(UUID productId)
     {
         if (productId == null) return Collections.emptyList();
         return list(
                 "select v from ProductVariantEntity v left join fetch v.product " +
-                "where v.product.id = ?1 and v.status <> ?2 order by v.id asc",
-                productId, ProductStatusEn.DISABLED);
+                        "where v.product.id = ?1 and v.status = ?2 order by v.id asc",
+                productId, ProductStatusEn.ACTIVE);
     }
 
+    /**
+     * Fetch every variant the admin editor can still act on for a given product —
+     * ACTIVE and PENDING, excludes only soft-deleted (DISABLED) variants.
+     * Used by admin-edit reads so a soft-deleted variant is absent after save,
+     * while a PENDING variant the admin is still staging remains visible.
+     */
+    public List<ProductVariantEntity> findNonDisabledVariantsForProductId(UUID productId)
+    {
+        if (productId == null) return Collections.emptyList();
+        return list(
+                "select v from ProductVariantEntity v left join fetch v.product " +
+                        "where v.product.id = ?1 and v.status <> ?2 order by v.id asc",
+                productId, ProductStatusEn.DISABLED);
+    }
 
 }

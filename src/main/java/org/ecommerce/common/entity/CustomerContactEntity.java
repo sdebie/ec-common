@@ -20,7 +20,6 @@ import java.util.UUID;
 @Table(name = "customer_contacts")
 public class CustomerContactEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator

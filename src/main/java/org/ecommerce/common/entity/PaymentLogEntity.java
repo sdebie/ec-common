@@ -16,7 +16,6 @@ import java.util.UUID;
 @Table(name = "payment_gateway_logs")
 public class PaymentLogEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator

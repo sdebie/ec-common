@@ -33,31 +33,8 @@ public class UserEntity extends PanacheEntityBase
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    /**
-     * PostgreSQL TEXT[] column — roles such as 'RETAIL', 'WHOLESALE'.
-     * Default mirrors the DB default of '{RETAIL}'.
-     */
-    @Column(name = "roles", columnDefinition = "text[]")
-    private String[] roles = new String[]{"RETAIL"};
-
     @Column(name = "is_active")
     private boolean isActive = true;
-
-    @Column(name = "mfa_enabled")
-    private boolean mfaEnabled = false;
-
-    @Column(name = "last_login")
-    private OffsetDateTime lastLogin;
-
-    @Column(name = "created_at")
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
-    // ── Security tokens ────────────────────────────────────────────────────
-    @Column(name = "reset_token")
-    private String resetToken;
-
-    @Column(name = "reset_token_expiry")
-    private OffsetDateTime resetTokenExpiry;
 
     @Column(name = "password_reset_code_hash")
     private String passwordResetCodeHash;
@@ -71,19 +48,24 @@ public class UserEntity extends PanacheEntityBase
     @Column(name = "password_reset_code_locked_until")
     private OffsetDateTime passwordResetCodeLockedUntil;
 
-    // ── Relationships ───────────────────────────────────────────────────────
+    /**
+     * PostgreSQL TEXT[] column — roles such as 'RETAIL', 'WHOLESALE'.
+     * Default mirrors the DB default of '{RETAIL}'.
+     */
+    @Column(name = "roles", columnDefinition = "text[]")
+    private String[] roles = new String[]{"RETAIL"};
+
+    @Column(name = "mfa_enabled")
+    private boolean mfaEnabled = false;
+
+    @Column(name = "last_login")
+    private OffsetDateTime lastLogin;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt = OffsetDateTime.now();
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private CustomerEntity customer;
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
-    public static UserEntity findByEmail(String email)
-    {
-        return find("lower(email) = lower(?1)", email).firstResult();
-    }
-
-    public static UserEntity findByResetToken(String token)
-    {
-        return find("resetToken", token).firstResult();
-    }
 }
 

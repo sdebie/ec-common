@@ -190,9 +190,11 @@ public enum OrderStatusEn {
      * <p>
      * The silent ones are silent on purpose. CREATED comes before payment, and emailing
      * there means confirming orders that then fail or time out. PROCESSING and
-     * READY_TO_SHIP are warehouse steps a shopper assumes are happening. FAILED is too
-     * vague to send: the cases a shopper can act on have their own statuses, and a bare
-     * "something went wrong" only causes alarm and support tickets.
+     * READY_TO_SHIP are warehouse steps a shopper assumes are happening. PENDING is the
+     * legacy default, reachable by no transition. FAILED is deliberately NOT among
+     * these four: the word is too vague to put in front of a shopper, but an order that
+     * ends in it has still ended, so it borrows the ordinary cancellation email (the
+     * {@code ENDED} case below) rather than saying nothing.
      *
      * @see CustomerNotification
      */
@@ -210,12 +212,8 @@ public enum OrderStatusEn {
             case DELIVERED, COLLECTED -> CustomerNotification.COMPLETED;
             case DELIVERY_FAILED, RETURNED_TO_ORIGIN -> CustomerNotification.DELIVERY_PROBLEM;
 
-            // However an order ended, the shopper needs the same thing: confirmation that
-            // it is over. Which side ended it belongs on the timeline, not in their inbox —
-            // and that is exactly why FAILED belongs here too. It is too vague a word to
-            // put in front of a shopper, but an order that ends in it has still ended, and
-            // silence would leave them waiting for something that is never coming. They get
-            // the same plain "cancelled, and refunded if you paid" as any other ending.
+            // Which side ended the order belongs on the timeline, not the inbox — so
+            // however it ended, the shopper gets the same plain notice as any other ending.
             case USER_CANCELED, ADMIN_CANCELED, SYSTEM_CANCELED, CANCELLED, FAILED -> CustomerNotification.ENDED;
 
             case REFUNDED, PARTIALLY_REFUNDED -> CustomerNotification.REFUNDED;

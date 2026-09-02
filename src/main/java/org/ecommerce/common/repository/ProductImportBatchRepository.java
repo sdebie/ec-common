@@ -2,21 +2,21 @@ package org.ecommerce.common.repository;
 
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.ecommerce.common.entity.ProductUploadBatchEntity;
+import org.ecommerce.common.entity.ProductImportBatchEntity;
 
 import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-public class ProductUploadBatchRepository extends BaseRepository<ProductUploadBatchEntity, UUID>
+public class ProductImportBatchRepository extends BaseRepository<ProductImportBatchEntity, UUID>
 {
     @Override
-    protected Class<ProductUploadBatchEntity> getEntityClass()
+    protected Class<ProductImportBatchEntity> getEntityClass()
     {
-        return ProductUploadBatchEntity.class;
+        return ProductImportBatchEntity.class;
     }
 
-	public List<ProductUploadBatchEntity> listAllOrderByCreatedAtDesc()
+	public List<ProductImportBatchEntity> listAllOrderByCreatedAtDesc()
 	{
 		return listAll(Sort.by("createdAt", Sort.Direction.Descending)
 				.and("id", Sort.Direction.Descending));

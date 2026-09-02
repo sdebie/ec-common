@@ -4,7 +4,9 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.ecommerce.common.enums.ImportSourceTypeEn;
 import org.ecommerce.common.enums.ProductUploadStatusEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -12,24 +14,32 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "product_price_upload_batches")
-public class ProductPriceUploadBatchEntity extends PanacheEntityBase {
+@Table(name = "product_import_batches")
+public class ProductImportBatchEntity extends PanacheEntityBase implements ImportBatchEntity
+{
     @Id
     @GeneratedValue
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Column(name = "filename")
     private String filename;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private ProductUploadStatusEn productUploadStatusEn;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private ImportSourceTypeEn importSourceTypeEn = ImportSourceTypeEn.FILE;
+
     @ManyToOne
     @JoinColumn(name = "uploaded_by")
     private StaffUserEntity uploadedBy;
 
     @Column(name = "total_rows")
-    private Integer totalRows = 0;
+    private Integer totalRows;
 
     @Column(name = "processed_rows")
     private Integer processedRows = 0;
@@ -45,9 +55,4 @@ public class ProductPriceUploadBatchEntity extends PanacheEntityBase {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
-
-    @ManyToOne
-    @JoinColumn(name = "approved_by")
-    private StaffUserEntity approvedBy;
 }
-

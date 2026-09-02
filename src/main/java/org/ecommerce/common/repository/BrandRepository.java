@@ -3,15 +3,24 @@ package org.ecommerce.common.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.BrandEntity;
 
+import java.util.Set;
 import java.util.UUID;
 
 @ApplicationScoped
 public class BrandRepository extends BaseRepository<BrandEntity, UUID>
 {
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of("id", "name", "slug", "logoUrl");
+
     @Override
     protected Class<BrandEntity> getEntityClass()
     {
         return BrandEntity.class;
+    }
+
+    @Override
+    protected Set<String> filterableFields()
+    {
+        return ALLOWED_FILTER_FIELDS;
     }
 
     public BrandEntity findBySlugIgnoreCase(String slug)
@@ -22,7 +31,6 @@ public class BrandRepository extends BaseRepository<BrandEntity, UUID>
         return find("lower(slug) = ?1", slug.trim().toLowerCase()).firstResult();
     }
 
-    /** Returns a brand with the given name that belongs to a different record than {@code excludeId}. */
     public BrandEntity findByNameExcludingId(String name, UUID excludeId)
     {
         if (excludeId == null) {
@@ -31,7 +39,6 @@ public class BrandRepository extends BaseRepository<BrandEntity, UUID>
         return find("lower(name) = lower(?1) and id != ?2", name, excludeId).firstResult();
     }
 
-    /** Returns a brand with the given slug that belongs to a different record than {@code excludeId}. */
     public BrandEntity findBySlugExcludingId(String slug, UUID excludeId)
     {
         if (excludeId == null) {

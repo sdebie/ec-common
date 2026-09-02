@@ -53,15 +53,24 @@ class DtoEncapsulationTest
         List<Class<?>> classes = new ArrayList<>();
         while (resources.hasMoreElements()) {
             File dir = new File(resources.nextElement().toURI());
-            File[] classFiles = dir.listFiles((d, name) -> name.endsWith(".class"));
-            if (classFiles == null) {
-                continue;
-            }
-            for (File classFile : classFiles) {
-                String simpleName = classFile.getName().substring(0, classFile.getName().length() - ".class".length());
-                classes.add(Class.forName(DTO_PACKAGE + "." + simpleName));
-            }
+            collectClasses(dir, DTO_PACKAGE, classes);
         }
         return classes;
+    }
+
+    private static void collectClasses(File dir, String packageName, List<Class<?>> classes) throws Exception
+    {
+        File[] entries = dir.listFiles();
+        if (entries == null) {
+            return;
+        }
+        for (File entry : entries) {
+            if (entry.isDirectory()) {
+                collectClasses(entry, packageName + "." + entry.getName(), classes);
+            } else if (entry.getName().endsWith(".class")) {
+                String simpleName = entry.getName().substring(0, entry.getName().length() - ".class".length());
+                classes.add(Class.forName(packageName + "." + simpleName));
+            }
+        }
     }
 }

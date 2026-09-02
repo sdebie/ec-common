@@ -2,7 +2,6 @@ package org.ecommerce.common.query;
 
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
-import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.query.enums.LogicalOperator;
 import org.ecommerce.common.query.enums.SortDirection;
 
@@ -12,8 +11,30 @@ import java.util.UUID;
 
 public class PanacheQueryBuilder
 {
+    /**
+     * Rewrites a filter whose key starts with {@code keyPrefix} into an {@code EXISTS}
+     * subquery against a to-many association, instead of letting it join directly — a direct
+     * join against a collection-valued association multiplies the root query's rows once per
+     * matched child, which then needs {@code DISTINCT} to collapse back; the EXISTS form never
+     * multiplies anything. Pass one of these to {@link #from(FilterRequest, Class, CollectionExistsRewrite)}
+     * when a filterable field lives on a collection-valued (one-to-many/many-to-many)
+     * association rather than a plain or to-one one.
+     *
+     * @param keyPrefix       the filter-key prefix that should be rewritten, e.g. {@code "category."}
+     * @param outerAlias      the root entity's alias in the enclosing query, e.g. {@code "p"}
+     * @param collectionField the collection-valued field on the root entity, e.g. {@code "categories"}
+     * @param targetEntity    the collection element's entity name, e.g. {@code "CategoryEntity"}
+     * @param targetAlias     the alias for the EXISTS subquery's own entity reference
+     */
+    public record CollectionExistsRewrite(String keyPrefix, String outerAlias, String collectionField,
+                                           String targetEntity, String targetAlias)
+    {
+    }
+
     private final FilterRequest filterRequest;
     private final Class<?> entityClass;
+    private final CollectionExistsRewrite collectionRewrite;
+    private final Set<String> allowedFields;
     private final List<String> whereClauses = new ArrayList<>();
     private final Map<String, Object> paramMap = new LinkedHashMap<>();
 
@@ -25,26 +46,63 @@ public class PanacheQueryBuilder
 
     public PanacheQueryBuilder(FilterRequest filterRequest)
     {
-        this(filterRequest, null);
+        this(filterRequest, null, null, null);
     }
 
     public PanacheQueryBuilder(FilterRequest filterRequest, Class<?> entityClass)
     {
+        this(filterRequest, entityClass, null, null);
+    }
+
+    public PanacheQueryBuilder(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite)
+    {
+        this(filterRequest, entityClass, collectionRewrite, null);
+    }
+
+    /**
+     * @param allowedFields the exact set of JPQL field-path strings (plain columns or dotted
+     *                       association paths) a caller may filter or sort by, or {@code null}
+     *                       for no restriction. {@link #sanitize} only checks a field name is
+     *                       syntactically well-formed — it happily permits a dotted path
+     *                       straight through an association to a sensitive column (e.g.
+     *                       {@code "user.passwordHash"}) — so passing {@code null} here is a
+     *                       real, unrestricted-reachability decision, not just "unset". An
+     *                       empty (non-null) set means every field/sort request is rejected.
+     */
+    public PanacheQueryBuilder(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite, Set<String> allowedFields)
+    {
         this.filterRequest = filterRequest != null ? filterRequest : new FilterRequest();
         this.entityClass = entityClass;
+        this.collectionRewrite = collectionRewrite;
+        this.allowedFields = allowedFields;
     }
 
     public static PanacheQueryBuilder from(FilterRequest filterRequest)
     {
-        return new PanacheQueryBuilder(filterRequest, null).build();
+        return new PanacheQueryBuilder(filterRequest, null, null, null).build();
     }
 
     public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass)
     {
-        return new PanacheQueryBuilder(filterRequest, entityClass).build();
+        return new PanacheQueryBuilder(filterRequest, entityClass, null, null).build();
     }
 
-    protected PanacheQueryBuilder build()
+    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite)
+    {
+        return new PanacheQueryBuilder(filterRequest, entityClass, collectionRewrite, null).build();
+    }
+
+    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass, Set<String> allowedFields)
+    {
+        return new PanacheQueryBuilder(filterRequest, entityClass, null, allowedFields).build();
+    }
+
+    public static PanacheQueryBuilder from(FilterRequest filterRequest, Class<?> entityClass, CollectionExistsRewrite collectionRewrite, Set<String> allowedFields)
+    {
+        return new PanacheQueryBuilder(filterRequest, entityClass, collectionRewrite, allowedFields).build();
+    }
+
+    private PanacheQueryBuilder build()
     {
         // 1. Flat top-level filters (AND-ed together)
         if (filterRequest.getFilters() != null) {
@@ -87,9 +145,16 @@ public class PanacheQueryBuilder
 
         for (SortRequest sortRequest : sortRequests) {
             if (sortRequest.getField() == null || sortRequest.getField().isBlank()) continue;
+            String field = sanitize(sortRequest.getField());
+            // Unlike an unpermitted filter (see buildFilter), an unpermitted sort field is
+            // skipped rather than rejected — there is a sensible fallback (the next requested
+            // field, or Sort.by("id") below) the way there isn't for a dropped filter, and
+            // silently falling through gives a caller probing for gated fields no signal at
+            // all, matching this codebase's existing "unresolvable sort request is not a
+            // malformed query" convention (see BaseRepository#adminOrderByClause).
+            if (allowedFields != null && !allowedFields.contains(field)) continue;
             Sort.Direction dir = sortRequest.getDirection() == SortDirection.DESC ? Sort.Direction.Descending : Sort.Direction.Ascending;
-            sort = (sort == null) ? Sort.by(sanitize(sortRequest.getField()), dir)
-                    : sort.and(sanitize(sortRequest.getField()), dir);
+            sort = (sort == null) ? Sort.by(field, dir) : sort.and(field, dir);
         }
         return sort != null ? sort : Sort.by("id");
     }
@@ -130,21 +195,32 @@ public class PanacheQueryBuilder
         return parts.size() == 1 ? parts.getFirst() : "(" + String.join(joiner, parts) + ")";
     }
 
-    protected String buildFilter(Filter filter)
+    private String buildFilter(Filter filter)
     {
         if (filter == null || filter.getKey() == null || filter.getKey().isBlank()) {
             return null;
         }
 
         String field = sanitize(filter.getKey());
+
+        // Unlike an unpermitted sort field, an unpermitted filter field is rejected outright
+        // rather than dropped: there is no sensible "default filter" to fall back to, and
+        // silently dropping it would make the query return MORE rows than the caller (or a
+        // security boundary relying on this filter) expects, instead of fewer — the opposite
+        // failure mode from a malformed request. FieldNameValidator only checks that a field
+        // name is syntactically well-formed (dots included, for JOIN navigation), never
+        // whether it's actually safe to expose — that's this allowlist's job.
+        if (allowedFields != null && !allowedFields.contains(field)) {
+            throw new IllegalArgumentException("Filtering by \"" + field + "\" is not permitted");
+        }
+
         String p = "p" + seq++;
 
         // Resolve the exact enum class for this field via reflection on the entity class.
-        // Falls back to the legacy ProductStatusEn heuristic when no entity class is provided.
         @SuppressWarnings("rawtypes")
         Class<? extends Enum> enumType = resolveEnumType(field);
 
-        return switch (filter.getOperator()) {
+        String clause = switch (filter.getOperator()) {
             case EQUALS -> {
                 bind(p, enumType != null ? coerceToEnum(filter.getValue(), enumType) : coerce(filter.getValue()));
                 yield field + " = :" + p;
@@ -193,6 +269,14 @@ public class PanacheQueryBuilder
             case IS_NOT_NULL -> field + " IS NOT NULL";
             default -> throw new IllegalArgumentException("Unsupported operator: " + filter.getOperator());
         };
+
+        if (collectionRewrite != null && filter.getKey().startsWith(collectionRewrite.keyPrefix())) {
+            return "EXISTS (SELECT 1 FROM " + collectionRewrite.targetEntity() + " " + collectionRewrite.targetAlias() +
+                    " WHERE " + collectionRewrite.targetAlias() + " MEMBER OF " +
+                    collectionRewrite.outerAlias() + "." + collectionRewrite.collectionField() +
+                    " AND " + clause + ")";
+        }
+        return clause;
     }
 
     // -------------------------------------------------------------------------
@@ -261,25 +345,9 @@ public class PanacheQueryBuilder
     }
 
     /**
-     * Legacy fallback used when no entity class is provided.
-     * Only handles ProductStatusEn — kept for backward compatibility with callers
-     * that have not yet passed an entity class.
-     */
-    protected Object coerceEnum(String value)
-    {
-        if (value == null) return null;
-        try {
-            return ProductStatusEn.valueOf(value);
-        } catch (IllegalArgumentException ignored) {
-            return value;
-        }
-    }
-
-    /**
      * Best-effort coercion from String to a more specific type.
-     * Override in a subclass if you need entity-aware type coercion.
      */
-    protected Object coerce(String value)
+    private Object coerce(String value)
     {
         if (value == null) return null;
         if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) return Boolean.parseBoolean(value);
@@ -298,7 +366,7 @@ public class PanacheQueryBuilder
         return value;
     }
 
-    protected List<Object> coerceList(List<String> values)
+    private List<Object> coerceList(List<String> values)
     {
         if (values == null) return Collections.emptyList();
         List<Object> out = new ArrayList<>();

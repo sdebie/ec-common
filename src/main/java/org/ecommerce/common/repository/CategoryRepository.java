@@ -3,15 +3,24 @@ package org.ecommerce.common.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.CategoryEntity;
 
+import java.util.Set;
 import java.util.UUID;
 
 @ApplicationScoped
 public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
 {
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of("id", "name", "slug", "description", "imageUrl", "parent.id", "parent.name", "parent.slug");
+
     @Override
     protected Class<CategoryEntity> getEntityClass()
     {
         return CategoryEntity.class;
+    }
+
+    @Override
+    protected Set<String> filterableFields()
+    {
+        return ALLOWED_FILTER_FIELDS;
     }
 
     public CategoryEntity findBySlugIgnoreCase(String slug)

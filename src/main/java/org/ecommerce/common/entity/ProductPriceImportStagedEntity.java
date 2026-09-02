@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.ProductImportValidationStatusEn;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -12,16 +13,18 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "product_price_upload_staged")
-public class ProductPriceUploadStagedEntity extends PanacheEntityBase
+@Table(name = "product_price_import_staged")
+public class ProductPriceImportStagedEntity extends PanacheEntityBase
 {
     @Id
     @GeneratedValue
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "batch_id")
-    private ProductPriceUploadBatchEntity batch;
+    private ProductPriceImportBatchEntity batch;
 
     private String sku;
 

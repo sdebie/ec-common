@@ -2,10 +2,11 @@ package org.ecommerce.common.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
-import org.ecommerce.common.dto.PageResponse;
+import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.enums.*;
 import org.ecommerce.common.query.*;
+import org.ecommerce.common.query.enums.FilterOperator;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -14,10 +15,30 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 {
+    private static final PanacheQueryBuilder.CollectionExistsRewrite CATEGORY_REWRITE = new PanacheQueryBuilder.CollectionExistsRewrite("category.", "p", "categories", "CategoryEntity", "category");
+    private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of(
+            "id", "slug", "name", "status", "productType", "isFeatured", "createdAt",
+            "brand.id", "category.id");
+    private static final List<PriceTypeEn> SALE_PRICE_TYPES = List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
+    private static final List<PriceTypeEn> ALL_SHOPPING_PRICE_TYPES = List.of(
+            PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
+
     @Override
     protected Class<ProductEntity> getEntityClass()
     {
         return ProductEntity.class;
+    }
+
+    @Override
+    protected Set<String> filterableFields()
+    {
+        return ALLOWED_FILTER_FIELDS;
+    }
+
+    @Override
+    protected PanacheQueryBuilder.CollectionExistsRewrite collectionRewrite()
+    {
+        return CATEGORY_REWRITE;
     }
 
     public ProductEntity findBySlugIgnoreCase(String slug)
@@ -40,43 +61,24 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
     {
         if (productId == null) return null;
 
-        return find("select p from ProductEntity p " +
-                "left join fetch p.categories " +
+        ProductEntity product = find("select p from ProductEntity p " +
                 "left join fetch p.brand " +
                 "where p.id = ?1", productId)
                 .firstResult();
+
+        if (product != null) {
+            attachCategories(List.of(product));
+        }
+        return product;
     }
 
     public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, Boolean inStockOnly)
     {
         LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> shoppingPriceTypes = onSale
-                ? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
-                : List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
-        FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-        ProductQueryBuilder queryBuilder = ProductQueryBuilder.fromProduct(normalizedFilterRequest, ProductEntity.class);
+        List<PriceTypeEn> shoppingPriceTypes = onSale ? SALE_PRICE_TYPES : ALL_SHOPPING_PRICE_TYPES;
+        PanacheQueryBuilder queryBuilder = buildQueryBuilder(filterRequest);
 
-        String hql = "select count(p) from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                "and v.status = :variantStatus " +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
-
-        if (Boolean.TRUE.equals(inStockOnly)) {
-            hql += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
-                    "WHERE sv.product = p " +
-                    "AND sv.status = :variantStatus " +
-                    "AND sv.stockQuantity > 0)";
-        }
-
-        if (queryBuilder.hasQuery()) {
-            hql += " AND " + queryBuilder.query();
-        }
+        String hql = "select count(p) from ProductEntity p where " + shoppingProductsWhereClause(Boolean.TRUE.equals(inStockOnly), queryBuilder);
 
         TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
         q.setParameter("priceTypes", shoppingPriceTypes);
@@ -98,11 +100,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                                                            Boolean inStockOnly)
     {
         LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> shoppingPriceTypes = onSale
-                ? List.of(PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
-                : List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.RETAIL_SALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE);
-        FilterRequest normalizedFilterRequest = normalizeProductFilterRequest(filterRequest);
-        ProductQueryBuilder queryBuilder = ProductQueryBuilder.fromProduct(normalizedFilterRequest, ProductEntity.class);
+        List<PriceTypeEn> shoppingPriceTypes = onSale ? SALE_PRICE_TYPES : ALL_SHOPPING_PRICE_TYPES;
+        PanacheQueryBuilder queryBuilder = buildQueryBuilder(filterRequest);
 
         CatalogueSortEn effectiveSort = sortBy != null ? sortBy : CatalogueSortEn.NAME_ASC;
         PriceBasisEn effectiveBasis = priceBasis != null ? priceBasis : PriceBasisEn.RETAIL;
@@ -110,32 +109,12 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         // ─── Step 1: ID-selection query (paged, no collection fetch, no DISTINCT) ───
         boolean needsSortKey = effectiveSort != CatalogueSortEn.NAME_ASC;
 
-        String sortKeyExpr = needsSortKey ? buildPriceSortKeyExpression(effectiveBasis) : null;
+        String sortKeyExpr = needsSortKey ? priceSortKeyExpression(effectiveBasis) : null;
 
         // Always select two columns so the result is consistently Object[]
         String idQuery = "select p.id, " +
                 (needsSortKey ? sortKeyExpr + " as sortKey" : "p.name as sortKey") +
-                " from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                "and v.status = :variantStatus " +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
-
-        if (Boolean.TRUE.equals(inStockOnly)) {
-            idQuery += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
-                    "WHERE sv.product = p " +
-                    "AND sv.status = :variantStatus " +
-                    "AND sv.stockQuantity > 0)";
-        }
-
-        if (queryBuilder.hasQuery()) {
-            idQuery += " AND " + queryBuilder.query();
-        }
+                " from ProductEntity p where " + shoppingProductsWhereClause(Boolean.TRUE.equals(inStockOnly), queryBuilder);
 
         // ORDER BY — price sorts use sortKey + tie-break; NAME_ASC uses name + id only
         if (needsSortKey) {
@@ -150,59 +129,28 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         params.put("now", now);
         params.put("variantStatus", ProductStatusEn.ACTIVE);
         if (needsSortKey) {
-            bindSortKeyParams(params, effectiveBasis, now);
+            bindPriceSortKeyParams(params, effectiveBasis);
         }
         if (queryBuilder.hasParams()) {
             params.putAll(queryBuilder.params());
         }
 
-        PageRequest effectivePage = pageRequest != null ? pageRequest : new PageRequest();
-        int pageIndex = effectivePage.getPageIndex();
-        int pageSize = effectivePage.getPageSize();
-
-        TypedQuery<Object[]> idTypedQuery = getEntityManager().createQuery(idQuery, Object[].class);
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            idTypedQuery.setParameter(entry.getKey(), entry.getValue());
-        }
-        idTypedQuery.setFirstResult(pageIndex * pageSize);
-        idTypedQuery.setMaxResults(pageSize);
-
-        List<Object[]> rows = idTypedQuery.getResultList();
+        List<Object[]> rows = buildPagedQuery(idQuery, Object[].class, params, pageRequest).getResultList();
 
         List<UUID> ids = rows.stream()
                 .map(row -> (UUID) row[0])
                 .collect(Collectors.toList());
 
-        // ─── Step 2: hydration (unpaged, no DISTINCT) ───────────────────────────────
         return fetchProductsByIds(ids);
     }
 
-    /**
-     * Total count of products matching {@link #findOnSaleProductEntities}'s predicate,
-     * for pagination metadata. Must mirror that method's WHERE-exists clause exactly —
-     * a divergence would report a total inconsistent with the actual page contents.
-     */
     public long countOnSaleProducts(boolean ignoreStatus)
     {
-        LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> salePriceTypes = List.of(
-                PriceTypeEn.RETAIL_SALE_PRICE,
-                PriceTypeEn.WHOLESALE_SALE_PRICE);
-
-        String hql = "select count(p) from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ")";
+        String hql = "select count(p) from ProductEntity p where " + activeVariantExistsClause(!ignoreStatus);
 
         TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
-        q.setParameter("priceTypes", salePriceTypes);
-        q.setParameter("now", now);
+        q.setParameter("priceTypes", SALE_PRICE_TYPES);
+        q.setParameter("now", LocalDateTime.now());
         if (!ignoreStatus) {
             q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
         }
@@ -213,215 +161,89 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
     public List<ProductEntity> findOnSaleProductEntities(PageRequest pageRequest, boolean ignoreStatus)
     {
-        LocalDateTime now = LocalDateTime.now();
-        List<PriceTypeEn> salePriceTypes = List.of(
-                PriceTypeEn.RETAIL_SALE_PRICE,
-                PriceTypeEn.WHOLESALE_SALE_PRICE);
-
-        // ─── Step 1: ID-selection query (paged, no collection fetch, no DISTINCT) ───
-        String idQuery = "select p.id from ProductEntity p " +
-                "where exists (" +
-                "select 1 from ProductVariantEntity v " +
-                "join VariantPricesEntity vp on vp.variant = v " +
-                "where v.product = p " +
-                (ignoreStatus ? "" : "and v.status = :variantStatus ") +
-                "and vp.priceType in :priceTypes " +
-                "and (vp.priceStartDate is null or vp.priceStartDate <= :now) " +
-                "and (vp.priceEndDate is null or vp.priceEndDate >= :now)" +
-                ") " +
-                "ORDER BY p.name ASC, p.id ASC";
+        String idQuery = "select p.id from ProductEntity p where " + activeVariantExistsClause(!ignoreStatus) +
+                " ORDER BY p.name ASC, p.id ASC";
 
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("priceTypes", salePriceTypes);
-        params.put("now", now);
+        params.put("priceTypes", SALE_PRICE_TYPES);
+        params.put("now", LocalDateTime.now());
         if (!ignoreStatus) {
             params.put("variantStatus", ProductStatusEn.ACTIVE);
         }
 
-        PageRequest effectivePage = pageRequest != null ? pageRequest : new PageRequest();
-        int pageIndex = effectivePage.getPageIndex();
-        int pageSize = effectivePage.getPageSize();
+        List<UUID> ids = buildPagedQuery(idQuery, UUID.class, params, pageRequest).getResultList();
 
-        TypedQuery<UUID> idTypedQuery = getEntityManager().createQuery(idQuery, UUID.class);
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            idTypedQuery.setParameter(entry.getKey(), entry.getValue());
-        }
-        idTypedQuery.setFirstResult(pageIndex * pageSize);
-        idTypedQuery.setMaxResults(pageSize);
-
-        List<UUID> ids = idTypedQuery.getResultList();
-
-        // ─── Step 2: hydration (unpaged, no DISTINCT) ───────────────────────────────
         return fetchProductsByIds(ids);
     }
 
-
-    // ─── Price Sort Key ───────────────────────────────────────────────────────────
-
-    /**
-     * Builds the HQL expression for the catalogue price sort key, parameterised by
-     * price basis. The expression computes:
-     * <pre>
-     *   COALESCE(
-     *     MIN(price) over active rows of the basis SALE tier,
-     *     MIN(price) over active rows of the basis BASE tier
-     *   )
-     * </pre>
-     * <p>
-     * "Active row" mirrors {@link VariantPricesRepository#findActiveForProductIds}:
-     * variant status = ACTIVE (unconditionally), price_start_date IS NULL OR ≤ :now,
-     * price_end_date IS NULL OR ≥ :now.
-     * <p>
-     * The returned fragment is a correlated subquery suitable for a SELECT list (aliased
-     * externally) or ORDER BY. The caller must bind the parameters returned by
-     * {@link #bindSortKeyParams(Map, PriceBasisEn, LocalDateTime)} on the same query.
-     *
-     * @param basis which price tier pair to use (RETAIL or WHOLESALE)
-     * @return the HQL fragment (no leading/trailing whitespace, no alias assignment)
-     */
-    private String buildPriceSortKeyExpression(PriceBasisEn basis)
+    private static String activeVariantExistsClause(boolean requireActiveStatus)
     {
-        // The two subqueries differ only in the price type parameter name; the
-        // activeness predicate is identical and unconditional (no ignoreStatus).
-        return "coalesce(" +
-                "(select min(vp1.price) from VariantPricesEntity vp1 " +
-                "join vp1.variant v1 " +
-                "where v1.product = p " +
-                "and v1.status = :variantStatus " +
-                "and vp1.priceType = :salePriceType " +
-                "and (vp1.priceStartDate is null or vp1.priceStartDate <= :now) " +
-                "and (vp1.priceEndDate is null or vp1.priceEndDate >= :now)), " +
-                "(select min(vp2.price) from VariantPricesEntity vp2 " +
-                "join vp2.variant v2 " +
-                "where v2.product = p " +
-                "and v2.status = :variantStatus " +
-                "and vp2.priceType = :basePriceType " +
-                "and (vp2.priceStartDate is null or vp2.priceStartDate <= :now) " +
-                "and (vp2.priceEndDate is null or vp2.priceEndDate >= :now))" +
-                ")";
+        return "EXISTS (SELECT 1 FROM ProductVariantEntity v JOIN v.prices vp " +
+                "WHERE v.product = p " +
+                (requireActiveStatus ? "AND v.status = :variantStatus " : "") +
+                "AND vp.priceType IN :priceTypes " +
+                "AND " + VariantPricesRepository.activeWindowClause("vp", "now") + ")";
+    }
+
+    private static String priceSortKeyExpression(PriceBasisEn basis)
+    {
+        return "(SELECT MIN(vp2.price) FROM ProductVariantEntity v2 JOIN v2.prices vp2 " +
+                "WHERE v2.product = p AND v2.status = :variantStatus " +
+                "AND vp2.priceType IN :sortPriceTypes " +
+                "AND " + VariantPricesRepository.activeWindowClause("vp2", "now") + ")";
+    }
+
+    private static void bindPriceSortKeyParams(Map<String, Object> params, PriceBasisEn basis)
+    {
+        params.put("sortPriceTypes", basis == PriceBasisEn.WHOLESALE
+                ? List.of(PriceTypeEn.WHOLESALE_PRICE, PriceTypeEn.WHOLESALE_SALE_PRICE)
+                : List.of(PriceTypeEn.RETAIL_PRICE, PriceTypeEn.RETAIL_SALE_PRICE));
     }
 
     /**
-     * Binds the parameters required by the sort-key expression produced by
-     * {@link #buildPriceSortKeyExpression(PriceBasisEn)} into the supplied parameter map.
-     * The caller must also ensure `:variantStatus` is bound (shared with the product
-     * active-variant exists-predicate).
-     * <p>
-     * Parameters bound: {@code :salePriceType}, {@code :basePriceType}, {@code :now},
-     * {@code :variantStatus}.
-     *
-     * @param params the mutable parameter map to populate
-     * @param basis  the price basis (determines which sale/base enum values are bound)
-     * @param now    the current timestamp for the active-window check
+     * The shared "shopping-eligible product" predicate: an active-variant EXISTS clause,
+     * optionally narrowed to in-stock variants, optionally ANDed with a client filter —
+     * shared by {@link #countShoppingProducts} and {@link #findShoppingProductEntities} so
+     * the two can never diverge on which products qualify.
      */
-    private void bindSortKeyParams(Map<String, Object> params, PriceBasisEn basis, LocalDateTime now)
+    private static String shoppingProductsWhereClause(boolean inStockOnly, PanacheQueryBuilder queryBuilder)
     {
-        PriceTypeEn salePriceType;
-        PriceTypeEn basePriceType;
-
-        if (basis == PriceBasisEn.WHOLESALE) {
-            salePriceType = PriceTypeEn.WHOLESALE_SALE_PRICE;
-            basePriceType = PriceTypeEn.WHOLESALE_PRICE;
-        } else {
-            salePriceType = PriceTypeEn.RETAIL_SALE_PRICE;
-            basePriceType = PriceTypeEn.RETAIL_PRICE;
+        String clause = activeVariantExistsClause(true);
+        if (inStockOnly) {
+            clause += " AND EXISTS (SELECT 1 FROM ProductVariantEntity sv " +
+                    "WHERE sv.product = p " +
+                    "AND sv.status = :variantStatus " +
+                    "AND sv.stockQuantity > 0)";
         }
-
-        params.put("salePriceType", salePriceType);
-        params.put("basePriceType", basePriceType);
-        params.put("now", now);
-        params.put("variantStatus", ProductStatusEn.ACTIVE);
+        if (queryBuilder.hasQuery()) {
+            clause += " AND " + queryBuilder.query();
+        }
+        return clause;
     }
 
-    private FilterRequest normalizeProductFilterRequest(FilterRequest filterRequest)
+    /** {@link PanacheQueryBuilder#from} with this repository's fixed category-rewrite/allowlist args, so callers only ever vary {@code filterRequest}. */
+    private static PanacheQueryBuilder buildQueryBuilder(FilterRequest filterRequest)
     {
-        FilterRequest normalized = new FilterRequest();
-        if (filterRequest == null) {
-            return normalized;
-        }
-
-        normalized.setSort(filterRequest.getSort());
-        normalized.setFilters(copyAndNormalizeFilters(filterRequest.getFilters()));
-        normalized.setFilterGroups(copyAndNormalizeGroups(filterRequest.getFilterGroups()));
-        return normalized;
+        return PanacheQueryBuilder.from(filterRequest, ProductEntity.class, CATEGORY_REWRITE, ALLOWED_FILTER_FIELDS);
     }
 
-    private List<Filter> copyAndNormalizeFilters(List<Filter> filters)
+    /** Binds {@code params} onto a paged {@link TypedQuery} for {@code hql}, defaulting {@code pageRequest} like this class's other paginated methods. */
+    private <R> TypedQuery<R> buildPagedQuery(String hql, Class<R> resultType, Map<String, Object> params, PageRequest pageRequest)
     {
-        if (filters == null || filters.isEmpty()) {
-            return filters;
+        PageRequest effectivePage = pageRequest != null ? pageRequest : new PageRequest();
+        TypedQuery<R> query = getEntityManager().createQuery(hql, resultType);
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            query.setParameter(entry.getKey(), entry.getValue());
         }
-
-        List<Filter> normalized = new ArrayList<>(filters.size());
-        for (Filter original : filters) {
-            if (original == null) {
-                continue;
-            }
-
-            Filter copy = new Filter();
-            copy.setKey(normalizeProductFilterKey(original.getKey()));
-            copy.setOperator(original.getOperator());
-            copy.setValue(original.getValue());
-            copy.setValues(original.getValues() == null ? null : new ArrayList<>(original.getValues()));
-            normalized.add(copy);
-        }
-        return normalized;
+        query.setFirstResult(effectivePage.getPageIndex() * effectivePage.getPageSize());
+        query.setMaxResults(effectivePage.getPageSize());
+        return query;
     }
 
-    private List<FilterGroup> copyAndNormalizeGroups(List<FilterGroup> groups)
-    {
-        if (groups == null || groups.isEmpty()) {
-            return groups;
-        }
-
-        List<FilterGroup> normalized = new ArrayList<>(groups.size());
-        for (FilterGroup group : groups) {
-            if (group == null) {
-                continue;
-            }
-
-            FilterGroup copy = new FilterGroup();
-            copy.setOperator(group.getOperator());
-            copy.setFilters(copyAndNormalizeFilters(group.getFilters()));
-            copy.setFilterGroups(copyAndNormalizeGroups(group.getFilterGroups()));
-            normalized.add(copy);
-        }
-        return normalized;
-    }
-
-    private String normalizeProductFilterKey(String key)
-    {
-        if (key == null || key.isBlank()) {
-            return key;
-        }
-
-        if (key.startsWith("p.") || key.startsWith("category.")) {
-            return key;
-        }
-
-        if (key.startsWith("categories.")) {
-            return "category." + key.substring("categories.".length());
-        }
-
-        if (key.contains(".")) {
-            return "p." + key;
-        }
-
-        return "p." + key;
-    }
-
-    // ─── Best Sellers ──────────────────────────────────────────────────────────
-
-    /**
-     * Returns the top 10 best-selling products based on total quantity sold in
-     * DELIVERED orders. If fewer than 10 exist, the remainder is filled with
-     * random products so the response always contains up to 10 entries.
-     */
     public List<ProductEntity> findTopBestSellerEntities()
     {
         final int TARGET = 10;
 
-        // Step 1 – collect best-seller product IDs ranked by units sold
         List<Object[]> rows = getEntityManager()
                 .createQuery(
                         "select oi.variant.product.id, sum(oi.quantity) as total " +
@@ -440,10 +262,8 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 .map(row -> (UUID) row[0])
                 .collect(Collectors.toList());
 
-        // Step 2 – fetch full product entities (with category + brand) preserving rank order
         List<ProductEntity> bestSellers = fetchProductsByIds(bestSellerIds);
 
-        // Step 3 – pad with random products when fewer than TARGET were found
         List<ProductEntity> result = new ArrayList<>(bestSellers);
         if (result.size() < TARGET) {
             int needed = TARGET - result.size();
@@ -454,10 +274,6 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return result;
     }
 
-    /**
-     * Fetches ProductEntity records for the given IDs with category and brand
-     * eagerly loaded. The returned list preserves the order of the supplied IDs.
-     */
     private List<ProductEntity> fetchProductsByIds(List<UUID> ids)
     {
         if (ids == null || ids.isEmpty()) return Collections.emptyList();
@@ -465,16 +281,15 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         List<ProductEntity> unordered = getEntityManager()
                 .createQuery(
                         "select p from ProductEntity p " +
-                                "left join fetch p.categories " +
                                 "left join fetch p.brand " +
                                 "where p.id in :ids",
                         ProductEntity.class)
                 .setParameter("ids", ids)
                 .getResultList();
 
-        // Restore the ranked order returned by the aggregation query
-        Map<UUID, ProductEntity> byId = unordered.stream()
-                .collect(Collectors.toMap(ProductEntity::getId, p -> p));
+        attachCategories(unordered);
+
+        Map<UUID, ProductEntity> byId = unordered.stream().collect(Collectors.toMap(ProductEntity::getId, p -> p));
 
         return ids.stream()
                 .map(byId::get)
@@ -482,97 +297,134 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Returns up to {@code limit} random products excluding the given IDs.
-     */
     private List<ProductEntity> findRandomProductEntitiesExcluding(int limit, List<UUID> excludeIds)
     {
         TypedQuery<ProductEntity> q;
         if (excludeIds == null || excludeIds.isEmpty()) {
             q = getEntityManager().createQuery(
                     "select p from ProductEntity p " +
-                            "left join fetch p.categories " +
                             "left join fetch p.brand " +
                             "order by function('random')",
                     ProductEntity.class);
         } else {
             q = getEntityManager().createQuery(
                             "select p from ProductEntity p " +
-                                    "left join fetch p.categories " +
                                     "left join fetch p.brand " +
                                     "where p.id not in :excludeIds " +
                                     "order by function('random')",
                             ProductEntity.class)
                     .setParameter("excludeIds", excludeIds);
         }
-        return q.setMaxResults(limit).getResultList();
+        List<ProductEntity> products = q.setMaxResults(limit).getResultList();
+        attachCategories(products);
+        return products;
     }
 
-    /**
-     * Paged admin product list (entities), with optional status/category/brand/search
-     * filters. Returns the page of entities plus pagination metadata; the caller maps
-     * each entity to its DTO.
-     */
-    public PageResponse<ProductEntity> findAdminProductPage(int pageIndex, int pageSize, String status, String categoryId, String brandId, String search)
+    private void attachCategories(List<ProductEntity> products)
     {
-        int effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
-        int effectivePageIndex = Math.max(pageIndex, 0);
+        if (products == null || products.isEmpty()) return;
 
-        StringBuilder whereClause = new StringBuilder("WHERE 1=1");
-        Map<String, Object> params = new LinkedHashMap<>();
+        List<UUID> ids = products.stream().map(ProductEntity::getId).collect(Collectors.toList());
 
+        List<Object[]> rows = getEntityManager()
+                .createQuery("select p.id, c from ProductEntity p join p.categories c where p.id in :ids", Object[].class)
+                .setParameter("ids", ids)
+                .getResultList();
+
+        Map<UUID, Set<CategoryEntity>> categoriesByProductId = new HashMap<>();
+        for (Object[] row : rows) {
+            UUID productId = (UUID) row[0];
+            CategoryEntity category = (CategoryEntity) row[1];
+            categoriesByProductId.computeIfAbsent(productId, k -> new HashSet<>()).add(category);
+        }
+
+        for (ProductEntity product : products) {
+            product.setCategories(categoriesByProductId.getOrDefault(product.getId(), new HashSet<>()));
+        }
+    }
+
+    private Set<UUID> findProductIdsMatchingSearch(String search)
+    {
+        String searchPattern = "%" + search.trim().toLowerCase() + "%";
+
+        List<UUID> byName = getEntityManager()
+                .createQuery("SELECT p.id FROM ProductEntity p WHERE LOWER(p.name) LIKE :search", UUID.class)
+                .setParameter("search", searchPattern)
+                .getResultList();
+
+        List<UUID> bySku = getEntityManager()
+                .createQuery("SELECT sv.product.id FROM ProductVariantEntity sv WHERE LOWER(sv.sku) LIKE :search", UUID.class)
+                .setParameter("search", searchPattern)
+                .getResultList();
+
+        Set<UUID> matchedIds = new LinkedHashSet<>(byName);
+        matchedIds.addAll(bySku);
+        return matchedIds;
+    }
+
+    private record AdminProductFilter(String whereClause, Map<String, Object> params)
+    {
+    }
+
+    private AdminProductFilter buildAdminProductFilter(String status, String categoryId, String brandId, String search)
+    {
+        List<Filter> filters = new ArrayList<>();
         if (status != null && !status.isBlank()) {
-            whereClause.append(" AND p.status = :status");
-            params.put("status", ProductStatusEn.valueOf(status));
+            filters.add(new Filter("status", FilterOperator.EQUALS, ProductStatusEn.valueOf(status).name()));
         }
         if (categoryId != null && !categoryId.isBlank()) {
-            whereClause.append(" AND EXISTS (SELECT 1 FROM p.categories c WHERE c.id = :categoryId)");
-            params.put("categoryId", UUID.fromString(categoryId));
+            filters.add(new Filter("category.id", FilterOperator.EQUALS, UUID.fromString(categoryId).toString()));
         }
         if (brandId != null && !brandId.isBlank()) {
-            whereClause.append(" AND p.brand.id = :brandId");
-            params.put("brandId", UUID.fromString(brandId));
+            filters.add(new Filter("brand.id", FilterOperator.EQUALS, UUID.fromString(brandId).toString()));
         }
+
+        FilterRequest filterRequest = new FilterRequest();
+        filterRequest.setFilters(filters);
+        PanacheQueryBuilder queryBuilder = buildQueryBuilder(filterRequest);
+
+        List<String> clauses = new ArrayList<>();
+        Map<String, Object> params = new LinkedHashMap<>(queryBuilder.params());
+        if (queryBuilder.hasQuery()) {
+            clauses.add(queryBuilder.query());
+        }
+
         if (search != null && !search.isBlank()) {
-            String searchPattern = "%" + search.trim().toLowerCase() + "%";
-            whereClause.append(" AND (LOWER(p.name) LIKE :search")
-                    .append(" OR EXISTS (SELECT 1 FROM ProductVariantEntity sv WHERE sv.product = p AND LOWER(sv.sku) LIKE :search)")
-                    .append(")");
-            params.put("search", searchPattern);
+            Set<UUID> searchMatchIds = findProductIdsMatchingSearch(search);
+            if (searchMatchIds.isEmpty()) {
+                clauses.add("1=0");
+            } else {
+                clauses.add("p.id IN :searchMatchIds");
+                params.put("searchMatchIds", searchMatchIds);
+            }
         }
 
-        String countHql = "SELECT COUNT(p) FROM ProductEntity p " + whereClause;
-        TypedQuery<Long> countQuery = getEntityManager().createQuery(countHql, Long.class);
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            countQuery.setParameter(entry.getKey(), entry.getValue());
-        }
-        long totalElements = countQuery.getSingleResult();
-        int totalPages = effectivePageSize > 0
-                ? (int) Math.ceil((double) totalElements / effectivePageSize)
-                : 0;
-        // A deletion or filter change can make a previously valid client page fall
-        // outside the result set between requests. Return the final available page
-        // instead of an avoidable empty page; callers can render response metadata
-        // without an effect-driven pagination correction.
-        if (totalPages > 0) {
-            effectivePageIndex = Math.min(effectivePageIndex, totalPages - 1);
-        }
+        String whereClause = clauses.isEmpty() ? "" : " WHERE " + String.join(" AND ", clauses);
+        return new AdminProductFilter(whereClause, params);
+    }
 
-        String fetchHql = "SELECT DISTINCT p FROM ProductEntity p " +
-                "LEFT JOIN FETCH p.categories " +
-                "LEFT JOIN FETCH p.brand " +
-                whereClause +
-                " ORDER BY p.name ASC";
+    public long countAdminProducts(String status, String categoryId, String brandId, String search)
+    {
+        AdminProductFilter filter = buildAdminProductFilter(status, categoryId, brandId, search);
+        TypedQuery<Long> countQuery = getEntityManager()
+                .createQuery("SELECT COUNT(p) FROM ProductEntity p" + filter.whereClause(), Long.class);
+        filter.params().forEach(countQuery::setParameter);
+        return countQuery.getSingleResult();
+    }
+
+    public List<ProductEntity> findAdminProducts(PageRequest pageRequest, String status, String categoryId, String brandId, String search)
+    {
+        AdminProductFilter filter = buildAdminProductFilter(status, categoryId, brandId, search);
+
+        String fetchHql = "SELECT p FROM ProductEntity p LEFT JOIN FETCH p.brand" + filter.whereClause() + " ORDER BY p.name ASC";
         TypedQuery<ProductEntity> fetchQuery = getEntityManager().createQuery(fetchHql, ProductEntity.class);
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            fetchQuery.setParameter(entry.getKey(), entry.getValue());
-        }
-        fetchQuery.setFirstResult(effectivePageIndex * effectivePageSize);
-        fetchQuery.setMaxResults(effectivePageSize);
+        filter.params().forEach(fetchQuery::setParameter);
+        fetchQuery.setFirstResult(pageRequest.getOffset());
+        fetchQuery.setMaxResults(pageRequest.getPageSize());
 
         List<ProductEntity> products = fetchQuery.getResultList();
-
-        return new PageResponse<>(products, totalElements, totalPages, effectivePageIndex, effectivePageSize);
+        attachCategories(products);
+        return products;
     }
 
 }

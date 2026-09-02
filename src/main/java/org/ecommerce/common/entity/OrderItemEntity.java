@@ -15,7 +15,6 @@ import java.util.UUID;
 @Table(name = "order_items")
 public class OrderItemEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator

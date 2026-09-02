@@ -26,19 +26,16 @@ import java.util.UUID;
 @Table(name = "customers")
 public class CustomerEntity extends PanacheEntityBase
 {
-
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    // ── Link to user account ────────────────────────────────────────────────
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private UserEntity user;
 
-    // ── Profile ─────────────────────────────────────────────────────────────
     @Column(name = "first_name")
     private String firstName;
 
@@ -55,29 +52,17 @@ public class CustomerEntity extends PanacheEntityBase
     @Column(name = "status", nullable = false)
     private CustomerStatusEn status = CustomerStatusEn.PENDING;
 
-    // ── Relationships ────────────────────────────────────────────────────────
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomerAddressEntity> addresses = new ArrayList<>();
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomerContactEntity> contacts = new ArrayList<>();
 
-    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private WholesaleProfileEntity wholesaleProfile;
 
-    @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderEntity> orderEntities;
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    /**
-     * Finds a customer by the email stored on the linked {@link UserEntity}.
-     */
-    public static CustomerEntity findByEmail(String email)
-    {
-        return find("lower(user.email) = lower(?1)", email).firstResult();
-    }
-
 
     /**
      * The customer's physical address, or null when none has been captured.
@@ -88,7 +73,9 @@ public class CustomerEntity extends PanacheEntityBase
         return addressOfType(AddressTypeEn.PHYSICAL);
     }
 
-    /** The customer's postal address, or null when none has been captured. */
+    /**
+     * The customer's postal address, or null when none has been captured.
+     */
     public CustomerAddressEntity getPostalAddress()
     {
         return addressOfType(AddressTypeEn.POSTAL);
