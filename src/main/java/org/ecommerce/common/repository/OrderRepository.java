@@ -80,6 +80,39 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return order;
     }
 
+    /**
+     * Ids of orders in {@code statuses} created before {@code cutoff}, oldest first and capped
+     * at {@code limit} — the abandoned-checkout candidates the stock-recovery sweep releases.
+     */
+    public List<UUID> findAbandonedIds(Collection<OrderStatusEn> statuses, LocalDateTime cutoff, int limit)
+    {
+        return getEntityManager()
+                .createQuery("select o.id from OrderEntity o where o.status in :statuses and o.createdAt < :cutoff "
+                        + "order by o.createdAt", UUID.class)
+                .setParameter("statuses", statuses)
+                .setParameter("cutoff", cutoff)
+                .setMaxResults(limit)
+                .getResultList();
+    }
+
+    /**
+     * Both {@code items} and its {@code variant} are LAZY, and the variant ids are exactly what
+     * the stock-recovery sweep's stock update needs — fetched with the order rather than a
+     * query per line. Safe to fetch a collection here: this loads a single order by id.
+     */
+    public OrderEntity findWithItemsAndVariant(UUID id)
+    {
+        List<OrderEntity> found = getEntityManager()
+                .createQuery("select distinct o from OrderEntity o "
+                        + "left join fetch o.items i "
+                        + "left join fetch i.variant "
+                        + "where o.id = :id", OrderEntity.class)
+                .setParameter("id", id)
+                .getResultList();
+
+        return found.isEmpty() ? null : found.get(0);
+    }
+
     public OrderEntity findLatestOrderInfoBySessionId(UUID sessionId)
     {
         if (sessionId == null) {

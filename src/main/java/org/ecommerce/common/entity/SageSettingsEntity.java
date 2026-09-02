@@ -1,6 +1,5 @@
 package org.ecommerce.common.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -15,7 +14,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "sage_settings")
-public class SageSettingsEntity extends PanacheEntityBase
+public class SageSettingsEntity
 {
     @Id
     private UUID id;

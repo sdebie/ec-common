@@ -6,7 +6,7 @@ import org.ecommerce.common.entity.StoreSettingsEntity;
 import java.util.List;
 
 @ApplicationScoped
-public class SettingsRepository extends BaseRepository<StoreSettingsEntity, String>
+public class StoreSettingsRepository extends BaseRepository<StoreSettingsEntity, String>
 {
 
     @Override
