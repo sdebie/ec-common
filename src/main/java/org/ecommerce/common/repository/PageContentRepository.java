@@ -30,4 +30,13 @@ public class PageContentRepository extends BaseRepository<PageContentEntity, UUI
         }
         return list("category", category);
     }
+
+    public long countByContentContaining(String path)
+    {
+        return getEntityManager()
+                .createQuery("SELECT COUNT(p) FROM PageContentEntity p WHERE p.draftContent LIKE CONCAT('%', :path, '%') " +
+                        "OR p.publishedContent LIKE CONCAT('%', :path, '%')", Long.class)
+                .setParameter("path", path)
+                .getSingleResult();
+    }
 }

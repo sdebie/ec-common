@@ -12,4 +12,12 @@ public class StoreSettingsRepository extends BaseRepository<StoreSettingsEntity,
     {
         return StoreSettingsEntity.class;
     }
+
+    public long countByValueContaining(String path)
+    {
+        return getEntityManager()
+                .createQuery("SELECT COUNT(s) FROM StoreSettingsEntity s WHERE s.value LIKE CONCAT('%', :path, '%')", Long.class)
+                .setParameter("path", path)
+                .getSingleResult();
+    }
 }

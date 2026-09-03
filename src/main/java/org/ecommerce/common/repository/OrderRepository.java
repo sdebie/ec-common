@@ -52,7 +52,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return null;
         }
 
-        fetchAndAttachItems(List.of(order));
+        fetchAndAttachItems(List.of(order), true);
         return order;
     }
 
@@ -73,7 +73,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return null;
         }
 
-        fetchAndAttachItems(List.of(order));
+        fetchAndAttachItems(List.of(order), true);
         return order;
     }
 
@@ -93,24 +93,40 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
     }
 
     /**
-     * Both {@code items} and its {@code variant} are LAZY, and the variant ids are exactly what
-     * the stock-recovery sweep's stock update needs — fetched with the order rather than a
-     * query per line. Safe to fetch a collection here: this loads a single order by id.
+     * Stock recovery's graph: items + variant, no customer and no product — the stock update
+     * only needs a variant id per line. Shares {@link #fetchAndAttachItems} with the
+     * read/display graph rather than fetching the collection in the same query as the order
+     * itself, which would risk row-multiplication from the to-many join.
      */
     public OrderEntity findWithItemsAndVariant(UUID id)
     {
-        List<OrderEntity> found = getEntityManager()
-                .createQuery("select distinct o from OrderEntity o "
-                        + "left join fetch o.items i "
-                        + "left join fetch i.variant "
-                        + "where o.id = :id", OrderEntity.class)
-                .setParameter("id", id)
-                .getResultList();
+        OrderEntity order = findById(id);
+        if (order == null) {
+            return null;
+        }
 
-        return found.isEmpty() ? null : found.get(0);
+        fetchAndAttachItems(List.of(order), false);
+        return order;
     }
 
-    private void fetchAndAttachItems(List<OrderEntity> orders)
+    /** Every order for one customer, newest first, unpaged — the shopper's own order history. */
+    public List<OrderEntity> findByCustomerId(UUID customerId)
+    {
+        return find("customerEntity.id = ?1 order by createdAt desc", customerId).list();
+    }
+
+    /** The {@code limit} most recent orders for one customer, newest first — the admin customer-detail order history. */
+    public List<OrderEntity> findRecentByCustomerId(UUID customerId, int limit)
+    {
+        return find("customerEntity.id = ?1 order by createdAt desc", customerId).page(0, limit).list();
+    }
+
+    /**
+     * Batch-loads items (with variant, and product when {@code includeProduct}) for all given
+     * orders in one query and replaces each order's {@code items} collection — the one items
+     * query both graphs share.
+     */
+    private void fetchAndAttachItems(List<OrderEntity> orders, boolean includeProduct)
     {
         if (orders == null || orders.isEmpty()) return;
 
@@ -119,7 +135,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         List<OrderItemEntity> items = getEntityManager()
                 .createQuery("select i from OrderItemEntity i " +
                         "left join fetch i.variant v " +
-                        "left join fetch v.product " +
+                        (includeProduct ? "left join fetch v.product " : "") +
                         "where i.orderEntity.id in :orderIds", OrderItemEntity.class)
                 .setParameter("orderIds", orderIds)
                 .getResultList();
@@ -188,7 +204,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                         + "where o.id in :ids", OrderEntity.class)
                 .setParameter("ids", ids)
                 .getResultList();
-        fetchAndAttachItems(orders);
+        fetchAndAttachItems(orders, true);
 
         Map<UUID, OrderEntity> byId = new LinkedHashMap<>();
         for (OrderEntity order : orders) {

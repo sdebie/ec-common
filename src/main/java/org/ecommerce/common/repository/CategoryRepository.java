@@ -3,6 +3,7 @@ package org.ecommerce.common.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.ecommerce.common.entity.CategoryEntity;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -46,5 +47,26 @@ public class CategoryRepository extends BaseRepository<CategoryEntity, UUID>
         }
 
         return find("lower(slug) = lower(?1) and id != ?2", slug, excludeId).firstResult();
+    }
+
+    public long countByImageUrl(String imageUrl)
+    {
+        return count("imageUrl", imageUrl);
+    }
+
+    public List<CategoryEntity> findByParentId(UUID parentId)
+    {
+        return list("parent.id", parentId);
+    }
+
+    public long countByParentId(UUID parentId)
+    {
+        return count("parent.id = ?1", parentId);
+    }
+
+    /** Categories whose name still holds the literal HTML entity from bad legacy input — {@code fixCategoryNamesAmpersand}'s one-off correction. */
+    public List<CategoryEntity> findWithAmpersandEntityInName()
+    {
+        return list("name like ?1", "%&amp;%");
     }
 }

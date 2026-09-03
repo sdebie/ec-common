@@ -91,4 +91,24 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
         // Feature the specific image
         update("isFeatured = true WHERE id = ?1 AND productVariant.product.id = ?2", imageId, productId);
     }
+
+    public boolean existsForVariantAndUrl(UUID variantId, String imageUrl)
+    {
+        return count("productVariant.id = ?1 and imageUrl = ?2", variantId, imageUrl) > 0;
+    }
+
+    public int findMaxSortOrderForVariant(UUID variantId)
+    {
+        Integer max = getEntityManager()
+                .createQuery("SELECT COALESCE(MAX(pi.sortOrder), 0) FROM ProductImageEntity pi " +
+                        "WHERE pi.productVariant.id = :variantId", Integer.class)
+                .setParameter("variantId", variantId)
+                .getSingleResult();
+        return max == null ? 0 : max;
+    }
+
+    public long countByImageUrl(String imageUrl)
+    {
+        return count("imageUrl", imageUrl);
+    }
 }

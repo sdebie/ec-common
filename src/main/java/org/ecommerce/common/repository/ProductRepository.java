@@ -72,6 +72,36 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
         return product;
     }
 
+    public long countFeatured()
+    {
+        return count("isFeatured", true);
+    }
+
+    public long countByStatus(ProductStatusEn status)
+    {
+        return count("status", status);
+    }
+
+    /** Every featured product regardless of status, categories eager-fetched — the admin featured list. */
+    public List<ProductEntity> findFeaturedForAdmin()
+    {
+        return find("select distinct p from ProductEntity p left join fetch p.categories where p.isFeatured = true order by p.name asc").list();
+    }
+
+    /**
+     * Featured + ACTIVE products, name-ascending, capped at {@code limit} — the storefront's
+     * featured shopping list. Narrowed to one category when {@code category} is given.
+     */
+    public List<ProductEntity> findFeaturedActive(CategoryEntity category, int limit)
+    {
+        if (category != null) {
+            return find("isFeatured = true AND status = ?1 AND ?2 MEMBER OF categories ORDER BY name ASC",
+                    ProductStatusEn.ACTIVE, category).page(0, limit).list();
+        }
+        return find("isFeatured = true AND status = ?1 ORDER BY name ASC", ProductStatusEn.ACTIVE)
+                .page(0, limit).list();
+    }
+
     public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, Boolean inStockOnly)
     {
         LocalDateTime now = LocalDateTime.now();

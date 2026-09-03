@@ -46,4 +46,9 @@ public class BrandRepository extends BaseRepository<BrandEntity, UUID>
         }
         return find("lower(slug) = lower(?1) and id != ?2", slug, excludeId).firstResult();
     }
+
+    public long countByLogoUrl(String logoUrl)
+    {
+        return count("logoUrl", logoUrl);
+    }
 }

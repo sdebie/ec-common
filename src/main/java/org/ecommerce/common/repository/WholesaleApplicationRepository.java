@@ -20,6 +20,14 @@ public class WholesaleApplicationRepository extends BaseRepository<WholesaleAppl
 
     private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "status");
 
+    public WholesaleApplicationEntity findByCustomerId(UUID customerId) {
+        return find("customer.id = ?1", customerId).firstResult();
+    }
+
+    public boolean existsByAccountEmail(String accountEmail) {
+        return count("lower(accountEmail) = lower(?1)", accountEmail) > 0;
+    }
+
     public List<WholesaleApplicationEntity> findForAdmin(WholesaleApplicationStatusEn status, OffsetDateTime from, OffsetDateTime to, SortRequest sort, PageRequest pageRequest) {
 
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
