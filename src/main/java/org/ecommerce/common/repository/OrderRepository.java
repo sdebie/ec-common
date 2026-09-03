@@ -37,7 +37,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return ALLOWED_FILTER_FIELDS;
     }
 
-    public OrderEntity findOrderInfoById(UUID id)
+    public OrderEntity findByIdWithCustomerAndItems(UUID id)
     {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null");
@@ -52,7 +52,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return null;
         }
 
-        attachItems(List.of(order));
+        fetchAndAttachItems(List.of(order));
         return order;
     }
 
@@ -73,7 +73,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
             return null;
         }
 
-        attachItems(List.of(order));
+        fetchAndAttachItems(List.of(order));
         return order;
     }
 
@@ -110,7 +110,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return found.isEmpty() ? null : found.get(0);
     }
 
-    private void attachItems(List<OrderEntity> orders)
+    private void fetchAndAttachItems(List<OrderEntity> orders)
     {
         if (orders == null || orders.isEmpty()) return;
 
@@ -135,7 +135,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         }
     }
 
-    public List<OrderEntity> findAllOrderInfo(PageRequest pageRequest, FilterRequest filterRequest)
+    public List<OrderEntity> findAllWithCustomerAndItems(PageRequest pageRequest, FilterRequest filterRequest)
     {
         PageRequest effectivePageRequest = pageRequest == null ? new PageRequest() : pageRequest;
         FilterRequest effectiveFilterRequest = withDefaultCreatedAtSort(filterRequest);
@@ -150,7 +150,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        return hydrateOrdersById(ids);
+        return findByIdsWithCustomerAndItems(ids);
     }
 
     private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "totalAmount", "status");
@@ -167,31 +167,31 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
                 .setMaxResults(page.getPageSize());
         params.forEach(idQuery::setParameter);
 
-        return hydrateOrdersById(idQuery.getResultList());
+        return findByIdsWithCustomerAndItems(idQuery.getResultList());
     }
 
     /**
      * Batch-loads orders with their customer and items in three queries total, however many
-     * ids are given — the shape both {@link #findAllOrderInfo} and {@link #findForAdmin} need,
-     * kept in one place so neither drifts into re-fetching a page one row at a time.
+     * ids are given — the shape both {@link #findAllWithCustomerAndItems} and {@link #findForAdmin}
+     * need, kept in one place so neither drifts into re-fetching a page one row at a time.
      * Returns orders in the same order as {@code ids}; an id with no matching row is skipped.
      */
-    private List<OrderEntity> hydrateOrdersById(List<UUID> ids)
+    private List<OrderEntity> findByIdsWithCustomerAndItems(List<UUID> ids)
     {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();
         }
 
-        List<OrderEntity> hydrated = getEntityManager()
+        List<OrderEntity> orders = getEntityManager()
                 .createQuery("select o from OrderEntity o "
                         + "left join fetch o.customerEntity "
                         + "where o.id in :ids", OrderEntity.class)
                 .setParameter("ids", ids)
                 .getResultList();
-        attachItems(hydrated);
+        fetchAndAttachItems(orders);
 
         Map<UUID, OrderEntity> byId = new LinkedHashMap<>();
-        for (OrderEntity order : hydrated) {
+        for (OrderEntity order : orders) {
             byId.put(order.getId(), order);
         }
 

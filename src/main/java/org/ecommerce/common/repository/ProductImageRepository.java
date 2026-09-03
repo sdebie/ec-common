@@ -63,8 +63,8 @@ public class ProductImageRepository extends BaseRepository<ProductImageEntity, U
     }
 
     /**
-     * {@link #findForVariantIds}, grouped by variant id — the shape an order-hydration path
-     * needs to attach each line's pictures without ever touching {@code ProductVariantEntity}'s
+     * {@link #findForVariantIds}, grouped by variant id — the shape an order's line-item
+     * mapping needs to attach each line's pictures without ever touching {@code ProductVariantEntity}'s
      * own managed {@code images} collection. Each list keeps the query's own order: featured
      * image first, then by sort order — so a caller wanting just the display image can take
      * element 0.
