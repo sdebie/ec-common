@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Setter
 @Getter
-public class WholesaleCustomerDto
+public class WholesaleApplicationFormDto
 {
     private UUID id;
     private String email;
@@ -32,4 +32,3 @@ public class WholesaleCustomerDto
     private Boolean purchaseOrderRequired;
 
 }
-

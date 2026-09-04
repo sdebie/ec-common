@@ -5,8 +5,7 @@ import lombok.Setter;
 
 /**
  * A single physical or postal address, shared by every wire DTO that exposes one:
- * StorefrontCustomerPortalDto, CustomerProfileDto, WholesaleApplicationDetailsDto,
- * WholesaleCustomerDto.
+ * CustomerProfileDto, WholesaleApplicationDetailsDto, WholesaleApplicationFormDto.
  */
 @Getter
 @Setter
