@@ -50,9 +50,9 @@ public class OrderEntity
     private UUID sessionId;
 
     /**
-     * Identifies one checkout intent, stable across a client's retries of it
-     * (.kiro/specs/checkout-idempotency). A bearer capability of the same
-     * entropy as {@link #sessionId} — see {@code KNOWN-LIMITATIONS.md} §4.
+     * Identifies one checkout intent, stable across a client's retries of it.
+     * A bearer capability of the same entropy as {@link #sessionId} — treat it
+     * with the same care, since holding it is equivalent to holding the order.
      * Nullable: every order predating this feature, and any created during the
      * deployment window before the header became required, carries no key.
      */
@@ -61,9 +61,9 @@ public class OrderEntity
 
     /**
      * A hash of the cart the {@link #idempotencyKey} was minted for, aggregated
-     * and sorted by variant id. Detects a key reused with different contents
-     * (Requirement 3); never recomputed from {@link #items}, since it is a
-     * property of the originating request, not of the order's current state.
+     * and sorted by variant id. Detects a key reused with different contents;
+     * never recomputed from {@link #items}, since it is a property of the
+     * originating request, not of the order's current state.
      */
     @Column(name = "cart_fingerprint")
     private String cartFingerprint;
