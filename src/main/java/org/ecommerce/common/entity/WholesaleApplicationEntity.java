@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.WholesaleApplicationStatusEn;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -74,8 +75,9 @@ public class WholesaleApplicationEntity
     @Column(name = "notes")
     private String notes;
 
+    @CreationTimestamp
     @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "processed_at")
     private Instant processedAt;

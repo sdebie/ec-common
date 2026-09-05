@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.OrderStatusEn;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -35,6 +36,7 @@ public class OrderStatusHistoryEntity
     @Column(name = "changed_by")
     private String changedBy; // ID of the staff member or "SYSTEM"
 
+    @CreationTimestamp
     @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 }

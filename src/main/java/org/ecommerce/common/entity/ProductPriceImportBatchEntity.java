@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.ImportSourceTypeEn;
 import org.ecommerce.common.enums.ProductUploadStatusEn;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -48,8 +49,9 @@ public class ProductPriceImportBatchEntity implements ImportBatchEntity
     @Column(name = "validation_error_count")
     private Integer validationErrorCount = 0;
 
+    @CreationTimestamp
     @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "completed_at")
     private Instant completedAt;

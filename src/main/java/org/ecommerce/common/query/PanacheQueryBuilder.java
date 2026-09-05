@@ -6,6 +6,8 @@ import org.ecommerce.common.query.enums.LogicalOperator;
 import org.ecommerce.common.query.enums.SortDirection;
 
 import java.lang.reflect.Field;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.UUID;
 
@@ -181,48 +183,49 @@ public class PanacheQueryBuilder
 
         String p = "p" + seq++;
 
-        // Resolve the exact enum class for this field via reflection on the entity class.
-        @SuppressWarnings("rawtypes")
-        Class<? extends Enum> enumType = resolveEnumType(field);
+        // Resolve this field's declared Java type via reflection so values coerce to what
+        // the column actually is (an enum, an Instant, ...) instead of a shape-based guess —
+        // see coerceValue.
+        Class<?> fieldType = resolveFieldType(field);
 
         String clause = switch (filter.getOperator()) {
             case EQUALS -> {
-                bind(p, enumType != null ? coerceToEnum(filter.getValue(), enumType) : coerce(filter.getValue()));
+                bind(p, coerceValue(filter.getValue(), fieldType));
                 yield field + " = :" + p;
             }
             case NOT_EQUALS -> {
-                bind(p, enumType != null ? coerceToEnum(filter.getValue(), enumType) : coerce(filter.getValue()));
+                bind(p, coerceValue(filter.getValue(), fieldType));
                 yield field + " != :" + p;
             }
             case GREATER_THAN -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, coerceValue(filter.getValue(), fieldType));
                 yield field + " > :" + p;
             }
             case GREATER_THAN_OR_EQUALS -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, coerceValue(filter.getValue(), fieldType));
                 yield field + " >= :" + p;
             }
             case LESS_THAN -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, coerceValue(filter.getValue(), fieldType));
                 yield field + " < :" + p;
             }
             case LESS_THAN_OR_EQUALS -> {
-                bind(p, coerce(filter.getValue()));
+                bind(p, coerceValue(filter.getValue(), fieldType));
                 yield field + " <= :" + p;
             }
             case IN -> {
-                bind(p, enumType != null ? coerceToEnumList(filter.getValues(), enumType) : coerceList(filter.getValues()));
+                bind(p, coerceValues(filter.getValues(), fieldType));
                 yield field + " IN (:" + p + ")";
             }
             case NOT_IN -> {
-                bind(p, enumType != null ? coerceToEnumList(filter.getValues(), enumType) : coerceList(filter.getValues()));
+                bind(p, coerceValues(filter.getValues(), fieldType));
                 yield field + " NOT IN (:" + p + ")";
             }
             case BETWEEN -> {
-                yield field + " BETWEEN :" + p + " AND :" + bindBetweenBounds(p, filter, enumType);
+                yield field + " BETWEEN :" + p + " AND :" + bindBetweenBounds(p, filter, fieldType);
             }
             case NOT_BETWEEN -> {
-                yield field + " NOT BETWEEN :" + p + " AND :" + bindBetweenBounds(p, filter, enumType);
+                yield field + " NOT BETWEEN :" + p + " AND :" + bindBetweenBounds(p, filter, fieldType);
             }
             case LIKE -> {
                 bind(p, "%" + filter.getValue() + "%");
@@ -265,12 +268,9 @@ public class PanacheQueryBuilder
      * can splice it into the JPQL. Requires exactly two values, the same list {@link
      * Filter#getValues} already carries for IN/NOT_IN.
      */
-    @SuppressWarnings("rawtypes")
-    private String bindBetweenBounds(String fromParam, Filter filter, Class<? extends Enum> enumType)
+    private String bindBetweenBounds(String fromParam, Filter filter, Class<?> fieldType)
     {
-        List<Object> bounds = enumType != null
-                ? coerceToEnumList(filter.getValues(), enumType)
-                : coerceList(filter.getValues());
+        List<Object> bounds = coerceValues(filter.getValues(), fieldType);
         if (bounds.size() != 2) {
             throw new IllegalArgumentException("BETWEEN/NOT_BETWEEN requires exactly two values for \"" + filter.getKey() + "\"");
         }
@@ -282,12 +282,11 @@ public class PanacheQueryBuilder
     }
 
     /**
-     * Resolves the enum class for a given JPQL field name by inspecting the entity class
+     * Resolves the declared Java type of a JPQL field-path by inspecting the entity class
      * via reflection. Dot-notation fields (e.g. "address.city") walk the chain.
-     * Returns null if the field is not an enum or the entity class is unknown.
+     * Returns null if the path doesn't resolve or the entity class is unknown.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private Class<? extends Enum> resolveEnumType(String fieldName)
+    private Class<?> resolveFieldType(String fieldName)
     {
         if (entityClass == null) return null;
         try {
@@ -301,7 +300,7 @@ public class PanacheQueryBuilder
                 if (f == null) return null;
                 current = f.getType();
             }
-            return current.isEnum() ? (Class<? extends Enum>) current : null;
+            return current;
         } catch (Exception ignored) {
             return null;
         }
@@ -317,10 +316,34 @@ public class PanacheQueryBuilder
         return null;
     }
 
+    /**
+     * Coerces a single filter value to the field's resolved type when one is known (an enum,
+     * or {@link Instant} for a timestamp column) — falling back to {@link #coerce}'s
+     * shape-based guess when the field type is unresolved or isn't one of those. Resolving
+     * the real type first, rather than guessing from the string alone, is what lets an
+     * ISO-8601 timestamp bind correctly against an {@code Instant} column instead of falling
+     * through to a raw string.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Object coerceValue(String value, Class<?> fieldType)
+    {
+        if (value == null) return null;
+        if (fieldType != null && fieldType.isEnum()) return coerceToEnum(value, (Class<? extends Enum>) fieldType);
+        if (fieldType == Instant.class) return coerceToInstant(value);
+        return coerce(value);
+    }
+
+    private List<Object> coerceValues(List<String> values, Class<?> fieldType)
+    {
+        if (values == null) return Collections.emptyList();
+        List<Object> out = new ArrayList<>();
+        for (String v : values) out.add(coerceValue(v, fieldType));
+        return out;
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     private Object coerceToEnum(String value, Class<? extends Enum> enumClass)
     {
-        if (value == null) return null;
         try {
             return Enum.valueOf(enumClass, value);
         } catch (IllegalArgumentException ignored) {
@@ -328,17 +351,25 @@ public class PanacheQueryBuilder
         }
     }
 
-    @SuppressWarnings("rawtypes")
-    private List<Object> coerceToEnumList(List<String> values, Class<? extends Enum> enumClass)
+    /**
+     * Parses an ISO-8601 instant string (e.g. "2026-01-01T00:00:00Z"). Falls back to the raw
+     * string on a malformed value — the same best-effort contract as {@link #coerce} — so a
+     * bad filter value degrades to a clause that fails to match (or errors at the query
+     * layer) rather than this method throwing.
+     */
+    private Object coerceToInstant(String value)
     {
-        if (values == null) return Collections.emptyList();
-        List<Object> out = new ArrayList<>();
-        for (String v : values) out.add(coerceToEnum(v, enumClass));
-        return out;
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException ignored) {
+            return value;
+        }
     }
 
     /**
-     * Best-effort coercion from String to a more specific type.
+     * Best-effort coercion from String to a more specific type, used when the field's actual
+     * type is unknown (no entity class was given) or isn't one of the types
+     * {@link #coerceValue} special-cases.
      */
     private Object coerce(String value)
     {
@@ -357,14 +388,6 @@ public class PanacheQueryBuilder
         } catch (NumberFormatException ignored) {
         }
         return value;
-    }
-
-    private List<Object> coerceList(List<String> values)
-    {
-        if (values == null) return Collections.emptyList();
-        List<Object> out = new ArrayList<>();
-        for (String v : values) out.add(coerce(v));
-        return out;
     }
 
     public boolean hasQuery()

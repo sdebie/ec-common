@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -28,6 +29,7 @@ public class WishlistItemEntity
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariantEntity variant;
 
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 }
