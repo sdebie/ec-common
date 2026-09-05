@@ -43,7 +43,7 @@ public class QuoteRequestEntity
     @Column(name = "status", length = 20, nullable = false)
     private QuoteRequestStatusEn status = QuoteRequestStatusEn.NEW;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "status_changed_at")

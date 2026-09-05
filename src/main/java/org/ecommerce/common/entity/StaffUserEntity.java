@@ -52,6 +52,9 @@ public class StaffUserEntity
     @Column(name = "reset_password")
     private boolean resetPassword = false;
 
-    @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 }

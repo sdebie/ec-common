@@ -40,12 +40,12 @@ public class PageContentEntity
     @Column(name = "published_at")
     private Instant publishedAt;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = Instant.now();
+    private Instant updatedAt;
 
     /**
      * True when the draft has moved ahead of what readers currently see.

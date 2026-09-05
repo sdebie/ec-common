@@ -36,10 +36,10 @@ public class TestimonialEntity
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = Instant.now();
+    private Instant updatedAt;
 }
