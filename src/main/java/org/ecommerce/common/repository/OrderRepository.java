@@ -10,7 +10,7 @@ import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
 import org.ecommerce.common.query.enums.SortDirection;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -81,7 +81,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
      * Ids of orders in {@code statuses} created before {@code cutoff}, oldest first and capped
      * at {@code limit} — the abandoned-checkout candidates the stock-recovery sweep releases.
      */
-    public List<UUID> findAbandonedIds(Collection<OrderStatusEn> statuses, LocalDateTime cutoff, int limit)
+    public List<UUID> findAbandonedIds(Collection<OrderStatusEn> statuses, Instant cutoff, int limit)
     {
         return getEntityManager()
                 .createQuery("select o.id from OrderEntity o where o.status in :statuses and o.createdAt < :cutoff "
@@ -171,7 +171,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
 
     private static final Set<String> ADMIN_SORTABLE_FIELDS = Set.of("createdAt", "totalAmount", "status");
 
-    public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, SortRequest sort, PageRequest pageRequest)
+    public List<OrderEntity> findForAdmin(Collection<OrderStatusEn> statuses, Instant from, Instant to, SortRequest sort, PageRequest pageRequest)
     {
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
         Map<String, Object> params = new LinkedHashMap<>();
@@ -221,7 +221,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return ordered;
     }
 
-    public long countForAdmin(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to)
+    public long countForAdmin(Collection<OrderStatusEn> statuses, Instant from, Instant to)
     {
         Map<String, Object> params = new LinkedHashMap<>();
         String where = adminWhereClause(statuses, from, to, params);
@@ -233,7 +233,7 @@ public class OrderRepository extends BaseRepository<OrderEntity, UUID>
         return query.getSingleResult();
     }
 
-    private String adminWhereClause(Collection<OrderStatusEn> statuses, LocalDateTime from, LocalDateTime to, Map<String, Object> params)
+    private String adminWhereClause(Collection<OrderStatusEn> statuses, Instant from, Instant to, Map<String, Object> params)
     {
         List<String> clauses = new ArrayList<>();
 

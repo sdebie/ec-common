@@ -6,14 +6,15 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "page_content")
-public class PageContentEntity {
+public class PageContentEntity
+{
 
     @Id
     @GeneratedValue
@@ -37,18 +38,19 @@ public class PageContentEntity {
     private String publishedContent;
 
     @Column(name = "published_at")
-    private OffsetDateTime publishedAt;
+    private Instant publishedAt;
 
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    private Instant updatedAt = Instant.now();
 
-    /** True when the draft has moved ahead of what readers currently see. */
-    public boolean hasUnpublishedChanges()
-    {
+    /**
+     * True when the draft has moved ahead of what readers currently see.
+     */
+    public boolean hasUnpublishedChanges() {
         return !java.util.Objects.equals(draftContent, publishedContent);
     }
 }

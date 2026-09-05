@@ -6,8 +6,7 @@ import lombok.Setter;
 import org.ecommerce.common.enums.StaffRoleEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -35,13 +34,13 @@ public class StaffUserEntity
     private String passwordResetCodeHash;
 
     @Column(name = "password_reset_code_expiry")
-    private OffsetDateTime passwordResetCodeExpiry;
+    private Instant passwordResetCodeExpiry;
 
     @Column(name = "password_reset_code_attempts")
     private int passwordResetCodeAttempts = 0;
 
     @Column(name = "password_reset_code_locked_until")
-    private OffsetDateTime passwordResetCodeLockedUntil;
+    private Instant passwordResetCodeLockedUntil;
 
     @Column(name = "full_name")
     private String fullName;
@@ -53,9 +52,6 @@ public class StaffUserEntity
     @Column(name = "reset_password")
     private boolean resetPassword = false;
 
-    // staff_users.created_at is a plain TIMESTAMP (no timezone), unlike users.created_at
-    // (TIMESTAMPTZ) — the two are typed differently for that reason (LocalDateTime here,
-    // OffsetDateTime on UserEntity).
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 }

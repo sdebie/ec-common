@@ -6,7 +6,7 @@ import org.eclipse.microprofile.graphql.Type;
 import org.ecommerce.common.enums.OrderStatusEn;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -38,7 +38,7 @@ public class OrderDetailDto
     private OrderStatusEn status;
     private BigDecimal totalAmount;
     private Integer itemCount;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private String shippingPhone;
     private String shippingAddressLine1;
     private String shippingAddressLine2;
@@ -56,6 +56,6 @@ public class OrderDetailDto
         private UUID id;
         private OrderStatusEn status;
         private String comment;
-        private LocalDateTime createdAt;
+        private Instant createdAt;
     }
 }

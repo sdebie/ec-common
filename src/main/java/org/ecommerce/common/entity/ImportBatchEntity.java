@@ -2,7 +2,7 @@ package org.ecommerce.common.entity;
 
 import org.ecommerce.common.enums.ProductUploadStatusEn;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -34,7 +34,7 @@ public interface ImportBatchEntity {
 
     void setValidationErrorCount(Integer count);
 
-    LocalDateTime getCompletedAt();
+    Instant getCompletedAt();
 
-    void setCompletedAt(LocalDateTime completedAt);
+    void setCompletedAt(Instant completedAt);
 }

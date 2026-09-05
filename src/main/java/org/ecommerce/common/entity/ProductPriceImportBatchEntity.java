@@ -7,14 +7,15 @@ import org.ecommerce.common.enums.ImportSourceTypeEn;
 import org.ecommerce.common.enums.ProductUploadStatusEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "product_price_import_batches")
-public class ProductPriceImportBatchEntity implements ImportBatchEntity {
+public class ProductPriceImportBatchEntity implements ImportBatchEntity
+{
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -48,10 +49,10 @@ public class ProductPriceImportBatchEntity implements ImportBatchEntity {
     private Integer validationErrorCount = 0;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 
     @ManyToOne
     @JoinColumn(name = "approved_by")

@@ -6,7 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -49,14 +49,8 @@ public class PaymentLogEntity
     private String rawResponse; // The full POST body for auditing
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @PreUpdate
-    private void setUpdatedAt()
-    {
-        this.updatedAt = LocalDateTime.now();
-    }
+    private Instant updatedAt = Instant.now();
 }

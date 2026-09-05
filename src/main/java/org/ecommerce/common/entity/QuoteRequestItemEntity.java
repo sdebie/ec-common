@@ -24,8 +24,8 @@ public class QuoteRequestItemEntity
     @JoinColumn(name = "quote_request_id", referencedColumnName = "id", nullable = false)
     private QuoteRequestEntity quoteRequest;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "variant_id", referencedColumnName = "id", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", referencedColumnName = "id")
     private ProductVariantEntity variant;
 
     @Column(name = "product_name_snapshot", length = 255, nullable = false)

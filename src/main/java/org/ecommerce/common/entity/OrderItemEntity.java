@@ -25,8 +25,8 @@ public class OrderItemEntity
     private OrderEntity orderEntity;
 
     // Link to product variant via JPA relation
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "variant_id", referencedColumnName = "id", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", referencedColumnName = "id")
     private ProductVariantEntity variant;
 
     @Column(nullable = false)

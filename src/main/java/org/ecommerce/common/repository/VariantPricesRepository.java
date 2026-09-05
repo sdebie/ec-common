@@ -6,7 +6,7 @@ import org.ecommerce.common.entity.VariantPricesEntity;
 import org.ecommerce.common.enums.PriceTypeEn;
 import org.ecommerce.common.enums.ProductStatusEn;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 
 @ApplicationScoped
@@ -46,7 +46,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
         Map<String, Object> params = new HashMap<>();
         params.put("variantId", variantId);
         params.put("priceType", priceType);
-        params.put("now", LocalDateTime.now());
+        params.put("now", Instant.now());
         return find("variant.id = :variantId and priceType = :priceType and " +
                         activeWindowClause(null, "now") +
                         " order by updatedAt desc",
@@ -57,7 +57,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
     public List<VariantPricesEntity> findActiveForProductIds(
             List<UUID> productIds,
             List<PriceTypeEn> priceTypes,
-            LocalDateTime now,
+            Instant now,
             boolean ignoreStatus)
     {
         if (productIds == null || productIds.isEmpty() || priceTypes == null || priceTypes.isEmpty()) {
@@ -84,7 +84,7 @@ public class VariantPricesRepository extends BaseRepository<VariantPricesEntity,
     public List<VariantPricesEntity> findActiveForVariantIds(
             List<UUID> variantIds,
             List<PriceTypeEn> priceTypes,
-            LocalDateTime now)
+            Instant now)
     {
         if (variantIds == null || variantIds.isEmpty() || priceTypes == null || priceTypes.isEmpty()) {
             return Collections.emptyList();

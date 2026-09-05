@@ -3,7 +3,7 @@ package org.ecommerce.common.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -18,8 +18,8 @@ public class ProductImportBatchDto
     private Integer processedRows;
     private Integer skippedRows;
     private Integer validationErrorCount;
-    private LocalDateTime createdAt;
-    private LocalDateTime completedAt;
+    private Instant createdAt;
+    private Instant completedAt;
     private String uploadedByUsername;
     private String approvedByUsername;
 }

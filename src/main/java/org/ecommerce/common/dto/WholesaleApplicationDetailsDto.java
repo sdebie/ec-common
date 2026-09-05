@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.WholesaleApplicationStatusEn;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Setter
@@ -36,8 +36,8 @@ public class WholesaleApplicationDetailsDto
     private String rejectionReason;
 
     private WholesaleApplicationStatusEn status;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime processedAt;
+    private Instant createdAt;
+    private Instant processedAt;
     private UUID customerId;
 
 }

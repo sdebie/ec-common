@@ -6,7 +6,7 @@ import lombok.Setter;
 import org.ecommerce.common.enums.OrderStatusEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -36,5 +36,5 @@ public class OrderStatusHistoryEntity
     private String changedBy; // ID of the staff member or "SYSTEM"
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 }

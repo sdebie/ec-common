@@ -6,7 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -37,9 +37,9 @@ public class TestimonialEntity
     private int sortOrder = 0;
 
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    private Instant updatedAt = Instant.now();
 }

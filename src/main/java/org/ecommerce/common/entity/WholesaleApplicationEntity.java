@@ -6,7 +6,7 @@ import lombok.Setter;
 import org.ecommerce.common.enums.WholesaleApplicationStatusEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -75,10 +75,10 @@ public class WholesaleApplicationEntity
     private String notes;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "processed_at")
-    private OffsetDateTime processedAt;
+    private Instant processedAt;
 
     @Column(name = "rejection_reason")
     private String rejectionReason;

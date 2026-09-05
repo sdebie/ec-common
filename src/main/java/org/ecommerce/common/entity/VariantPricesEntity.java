@@ -7,7 +7,7 @@ import org.ecommerce.common.enums.PriceTypeEn;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -42,19 +42,19 @@ public class VariantPricesEntity
     private BigDecimal price;
 
     @Column(name = "price_start_date")
-    private LocalDateTime priceStartDate;
+    private Instant priceStartDate;
 
     @Column(name = "price_end_date")
-    private LocalDateTime priceEndDate;
+    private Instant priceEndDate;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "created_by")
     private UUID createdBy;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @Column(name = "updated_by")
     private UUID updatedBy;
@@ -62,14 +62,14 @@ public class VariantPricesEntity
     @PrePersist
     protected void onCreate()
     {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate()
     {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     // --- Helper Methods ---
@@ -79,14 +79,11 @@ public class VariantPricesEntity
      */
     public boolean isActive()
     {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (priceStartDate != null && now.isBefore(priceStartDate)) {
             return false;
         }
-        if (priceEndDate != null && now.isAfter(priceEndDate)) {
-            return false;
-        }
-        return true;
+        return priceEndDate == null || !now.isAfter(priceEndDate);
     }
 
 }

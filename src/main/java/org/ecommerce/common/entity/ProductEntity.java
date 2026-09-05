@@ -7,7 +7,7 @@ import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.enums.ProductTypeEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,23 +25,21 @@ public class ProductEntity
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 200)
     private String slug;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinTable(name = "product_categories", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
     private Set<CategoryEntity> categories = new HashSet<>();
 
-    public void setCategory(CategoryEntity cat)
-    {
+    public void setCategory(CategoryEntity cat) {
         if (cat == null) {
             return;
         }
         this.categories.add(cat);
     }
 
-    public CategoryEntity getCategory()
-    {
+    public CategoryEntity getCategory() {
         return categories.isEmpty() ? null : categories.iterator().next();
     }
 
@@ -70,7 +68,7 @@ public class ProductEntity
     private boolean isFeatured = false;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariantEntity> variants;

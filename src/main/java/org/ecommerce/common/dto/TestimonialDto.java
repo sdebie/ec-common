@@ -1,6 +1,6 @@
 package org.ecommerce.common.dto;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 public record TestimonialDto(
@@ -10,6 +10,8 @@ public record TestimonialDto(
         String authorTitle,
         boolean published,
         int sortOrder,
-        OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
-) {}
+        Instant createdAt,
+        Instant updatedAt
+)
+{
+}

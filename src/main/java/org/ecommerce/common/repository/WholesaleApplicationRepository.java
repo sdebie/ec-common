@@ -7,7 +7,7 @@ import org.ecommerce.common.enums.WholesaleApplicationStatusEn;
 import org.ecommerce.common.query.PageRequest;
 import org.ecommerce.common.query.SortRequest;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.*;
 
 @ApplicationScoped
@@ -28,7 +28,7 @@ public class WholesaleApplicationRepository extends BaseRepository<WholesaleAppl
         return count("lower(accountEmail) = lower(?1)", accountEmail) > 0;
     }
 
-    public List<WholesaleApplicationEntity> findForAdmin(WholesaleApplicationStatusEn status, OffsetDateTime from, OffsetDateTime to, SortRequest sort, PageRequest pageRequest) {
+    public List<WholesaleApplicationEntity> findForAdmin(WholesaleApplicationStatusEn status, Instant from, Instant to, SortRequest sort, PageRequest pageRequest) {
 
         PageRequest page = pageRequest == null ? new PageRequest() : pageRequest;
         Map<String, Object> params = new LinkedHashMap<>();
@@ -43,7 +43,7 @@ public class WholesaleApplicationRepository extends BaseRepository<WholesaleAppl
         return query.getResultList();
     }
 
-    public long countForAdmin(WholesaleApplicationStatusEn status, OffsetDateTime from, OffsetDateTime to) {
+    public long countForAdmin(WholesaleApplicationStatusEn status, Instant from, Instant to) {
 
         Map<String, Object> params = new LinkedHashMap<>();
         String where = adminWhereClause(status, from, to, params);
@@ -55,7 +55,7 @@ public class WholesaleApplicationRepository extends BaseRepository<WholesaleAppl
         return query.getSingleResult();
     }
 
-    private String adminWhereClause(WholesaleApplicationStatusEn status, OffsetDateTime from, OffsetDateTime to, Map<String, Object> params) {
+    private String adminWhereClause(WholesaleApplicationStatusEn status, Instant from, Instant to, Map<String, Object> params) {
 
         List<String> clauses = new ArrayList<>();
 

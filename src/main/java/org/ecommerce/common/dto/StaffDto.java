@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.StaffRoleEn;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -20,5 +20,5 @@ public class StaffDto
     private boolean isActive;
     private boolean resetPassword;
     private String temporaryPassword;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

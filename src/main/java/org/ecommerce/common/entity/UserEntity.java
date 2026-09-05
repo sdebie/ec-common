@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -39,13 +39,13 @@ public class UserEntity
     private String passwordResetCodeHash;
 
     @Column(name = "password_reset_code_expiry")
-    private OffsetDateTime passwordResetCodeExpiry;
+    private Instant passwordResetCodeExpiry;
 
     @Column(name = "password_reset_code_attempts")
     private int passwordResetCodeAttempts = 0;
 
     @Column(name = "password_reset_code_locked_until")
-    private OffsetDateTime passwordResetCodeLockedUntil;
+    private Instant passwordResetCodeLockedUntil;
 
     /**
      * PostgreSQL TEXT[] column — roles such as 'RETAIL', 'WHOLESALE'.
@@ -58,12 +58,12 @@ public class UserEntity
     private boolean mfaEnabled = false;
 
     @Column(name = "last_login")
-    private OffsetDateTime lastLogin;
+    private Instant lastLogin;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private Instant createdAt = Instant.now();
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private CustomerEntity customer;
 
 }

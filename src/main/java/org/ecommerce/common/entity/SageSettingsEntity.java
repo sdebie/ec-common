@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -41,7 +41,7 @@ public class SageSettingsEntity
     private String password;
 
     @Column(name = "items_lastupdate")
-    private LocalDateTime itemsLastUpdate;
+    private Instant itemsLastUpdate;
 
     @Column(name = "items_lastid")
     private String itemsLastId;

@@ -1,6 +1,6 @@
 package org.ecommerce.common.dto;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 public record PageContentDto(
@@ -10,6 +10,6 @@ public record PageContentDto(
         String category,
         String draftContent,
         String publishedContent,
-        OffsetDateTime publishedAt,
-        OffsetDateTime updatedAt
+        Instant publishedAt,
+        Instant updatedAt
 ) {}

@@ -6,7 +6,7 @@ import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * DTO representing a single price for a product variant.
@@ -27,10 +27,10 @@ public class VariantPriceDto
     private BigDecimal price;
 
     @Description("When this price becomes active (null = always active)")
-    private LocalDateTime priceStartDate;
+    private Instant priceStartDate;
 
     @Description("When this price expires (null = never expires)")
-    private LocalDateTime priceEndDate;
+    private Instant priceEndDate;
 
     @Description("Whether this price is currently active based on date range")
     private Boolean isActive;
@@ -38,8 +38,7 @@ public class VariantPriceDto
     @Description("Number of days remaining for sale prices (RETAIL_SALE_PRICE / WHOLESALE_SALE_PRICE); null for non-sale or no end date")
     private Long saleDaysRemaining;
 
-    public VariantPriceDto()
-    {
+    public VariantPriceDto() {
     }
 
 }

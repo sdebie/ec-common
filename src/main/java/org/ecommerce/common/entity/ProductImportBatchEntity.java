@@ -7,7 +7,7 @@ import org.ecommerce.common.enums.ImportSourceTypeEn;
 import org.ecommerce.common.enums.ProductUploadStatusEn;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -50,8 +50,8 @@ public class ProductImportBatchEntity implements ImportBatchEntity
     private Integer validationErrorCount = 0;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 }

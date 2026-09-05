@@ -5,9 +5,11 @@ import jakarta.persistence.TypedQuery;
 import org.ecommerce.common.entity.CategoryEntity;
 import org.ecommerce.common.entity.ProductEntity;
 import org.ecommerce.common.enums.*;
-import org.ecommerce.common.query.*;
+import org.ecommerce.common.query.FilterRequest;
+import org.ecommerce.common.query.PageRequest;
+import org.ecommerce.common.query.PanacheQueryBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -104,7 +106,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
     public long countShoppingProducts(FilterRequest filterRequest, boolean onSale, Boolean inStockOnly)
     {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<PriceTypeEn> shoppingPriceTypes = onSale ? SALE_PRICE_TYPES : ALL_SHOPPING_PRICE_TYPES;
         PanacheQueryBuilder queryBuilder = buildQueryBuilder(filterRequest);
 
@@ -129,7 +131,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
                                                            CatalogueSortEn sortBy, PriceBasisEn priceBasis,
                                                            Boolean inStockOnly)
     {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<PriceTypeEn> shoppingPriceTypes = onSale ? SALE_PRICE_TYPES : ALL_SHOPPING_PRICE_TYPES;
         PanacheQueryBuilder queryBuilder = buildQueryBuilder(filterRequest);
 
@@ -180,7 +182,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
         TypedQuery<Long> q = getEntityManager().createQuery(hql, Long.class);
         q.setParameter("priceTypes", SALE_PRICE_TYPES);
-        q.setParameter("now", LocalDateTime.now());
+        q.setParameter("now", Instant.now());
         if (!ignoreStatus) {
             q.setParameter("variantStatus", ProductStatusEn.ACTIVE);
         }
@@ -196,7 +198,7 @@ public class ProductRepository extends BaseRepository<ProductEntity, UUID>
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("priceTypes", SALE_PRICE_TYPES);
-        params.put("now", LocalDateTime.now());
+        params.put("now", Instant.now());
         if (!ignoreStatus) {
             params.put("variantStatus", ProductStatusEn.ACTIVE);
         }

@@ -55,8 +55,8 @@ public class QuoteRequestEntity
     @Column(name = "quoted_notes", columnDefinition = "TEXT")
     private String quotedNotes;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "quoted_by", referencedColumnName = "id", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "quoted_by", referencedColumnName = "id")
     private StaffUserEntity quotedBy;
 
     @OneToMany(mappedBy = "quoteRequest", cascade = CascadeType.ALL, orphanRemoval = true)
