@@ -115,27 +115,14 @@ public class OrderEntity
     private List<OrderItemEntity> items = new ArrayList<>();
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    /**
-     * The human-facing order reference shown to staff and customers. Derived
-     * from the id rather than stored, so it needs no sequence, no extra column
-     * and no backfill, and is stable for the life of the order.
-     */
-    public String getReference()
-    {
+    public String getReference() {
         return getId() == null ? null : "ORD-" + getId().toString().substring(0, 8).toUpperCase();
     }
 
-    /**
-     * Display name for whoever placed the order. A guest checkout has no
-     * customer record, so the contact details captured at checkout are the
-     * only name that exists — the same fallback order the confirmation mailer
-     * uses.
-     */
-    public String getPlacedByName()
-    {
+    public String getPlacedByName() {
         if (customerEntity != null) {
             String name = join(customerEntity.getFirstName(), customerEntity.getLastName());
             if (name != null) {
@@ -145,18 +132,12 @@ public class OrderEntity
         return join(contactFirstName, contactLastName);
     }
 
-    private static String join(String first, String last)
-    {
+    private static String join(String first, String last) {
         String joined = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
         return joined.isEmpty() ? null : joined;
     }
 
-    /**
-     * Total units on the order, not the number of distinct lines. Staff read this as
-     * "how many things am I picking", so a line of quantity 3 counts as 3.
-     */
-    public int totalUnits()
-    {
+    public int totalUnits() {
         if (items == null) {
             return 0;
         }
@@ -169,12 +150,7 @@ public class OrderEntity
         return count;
     }
 
-    /**
-     * An address that reaches whoever placed this order: the account email when the order
-     * belongs to a signed-in customer, otherwise the checkout contact a guest supplied.
-     */
-    public String reachableEmail()
-    {
+    public String reachableEmail() {
         if (customerEntity != null && customerEntity.getUser() != null) {
             String email = customerEntity.getUser().getEmail();
             if (email != null && !email.isBlank()) {
