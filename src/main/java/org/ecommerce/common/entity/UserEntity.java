@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -46,11 +47,7 @@ public class UserEntity
 
     @Column(name = "password_reset_code_locked_until")
     private Instant passwordResetCodeLockedUntil;
-
-    /**
-     * PostgreSQL TEXT[] column — roles such as 'RETAIL', 'WHOLESALE'.
-     * Default mirrors the DB default of '{RETAIL}'.
-     */
+    
     @Column(name = "roles", columnDefinition = "text[]")
     private String[] roles = new String[]{"RETAIL"};
 
@@ -60,6 +57,7 @@ public class UserEntity
     @Column(name = "last_login")
     private Instant lastLogin;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

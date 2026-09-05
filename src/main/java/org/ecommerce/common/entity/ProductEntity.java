@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.ProductStatusEn;
 import org.ecommerce.common.enums.ProductTypeEn;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -67,6 +68,7 @@ public class ProductEntity
     @Column(name = "is_featured", nullable = false)
     private boolean isFeatured = false;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

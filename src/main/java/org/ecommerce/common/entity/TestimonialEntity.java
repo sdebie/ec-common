@@ -3,6 +3,7 @@ package org.ecommerce.common.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -36,6 +37,7 @@ public class TestimonialEntity
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
