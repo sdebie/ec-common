@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.ecommerce.common.enums.OrderStatusEn;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
@@ -100,11 +99,6 @@ public class OrderEntity
     @Column(name = "postal_code")
     private String postalCode;
 
-    /**
-     * Courier tracking, recorded when the order is marked IN_TRANSIT. Null until then,
-     * and always null for a collection order. The in-transit notification exists to hand
-     * the shopper this reference — without it that email can only say "on its way".
-     */
     @Column(name = "tracking_number")
     private String trackingNumber;
 
@@ -114,7 +108,6 @@ public class OrderEntity
     @OneToMany(mappedBy = "orderEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemEntity> items = new ArrayList<>();
 
-    @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 

@@ -60,8 +60,8 @@ public class UserEntity
     @Column(name = "last_login")
     private Instant lastLogin;
 
-    @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private CustomerEntity customer;

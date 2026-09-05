@@ -53,32 +53,16 @@ public class VariantPricesEntity
     @Column(name = "created_by")
     private UUID createdBy;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @Column(name = "updated_by")
     private UUID updatedBy;
 
-    @PrePersist
-    protected void onCreate()
-    {
-        createdAt = Instant.now();
-        updatedAt = Instant.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate()
-    {
-        updatedAt = Instant.now();
-    }
-
-    // --- Helper Methods ---
-
     /**
      * Checks if the price is currently active (within its date range).
      */
-    public boolean isActive()
-    {
+    public boolean isActive() {
         Instant now = Instant.now();
         if (priceStartDate != null && now.isBefore(priceStartDate)) {
             return false;

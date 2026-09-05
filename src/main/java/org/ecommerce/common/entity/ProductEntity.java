@@ -67,8 +67,8 @@ public class ProductEntity
     @Column(name = "is_featured", nullable = false)
     private boolean isFeatured = false;
 
-    @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariantEntity> variants;

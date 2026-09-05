@@ -48,9 +48,9 @@ public class PaymentLogEntity
     @Column(name = "raw_response")
     private String rawResponse; // The full POST body for auditing
 
-    @Column(name = "created_at")
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
-    @Column(name = "updated_at")
-    private Instant updatedAt = Instant.now();
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 }

@@ -6,8 +6,6 @@ import lombok.Setter;
 import org.ecommerce.common.enums.AddressTypeEn;
 import org.ecommerce.common.enums.CustomerStatusEn;
 import org.ecommerce.common.enums.CustomerTypeEn;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -66,11 +64,9 @@ public class CustomerEntity
     @OneToMany(mappedBy = "customerEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderEntity> orderEntities;
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -78,21 +74,18 @@ public class CustomerEntity
      * The customer's physical address, or null when none has been captured.
      * A customer holds typed address rows; flat views read through these.
      */
-    public CustomerAddressEntity getPhysicalAddress()
-    {
+    public CustomerAddressEntity getPhysicalAddress() {
         return addressOfType(AddressTypeEn.PHYSICAL);
     }
 
     /**
      * The customer's postal address, or null when none has been captured.
      */
-    public CustomerAddressEntity getPostalAddress()
-    {
+    public CustomerAddressEntity getPostalAddress() {
         return addressOfType(AddressTypeEn.POSTAL);
     }
 
-    private CustomerAddressEntity addressOfType(AddressTypeEn type)
-    {
+    private CustomerAddressEntity addressOfType(AddressTypeEn type) {
         if (addresses == null) {
             return null;
         }
