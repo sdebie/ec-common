@@ -12,6 +12,7 @@ public class ProductComparisonDto
 {
     private UUID stagedId;
     private String sku;
+    private String productSlug;
 
     // CSV-layout fields for import review
     private String categorySlug;
@@ -40,4 +41,5 @@ public class ProductComparisonDto
     private boolean newProduct;
     private boolean newVariant;
     private boolean hasChanges;
+    private boolean processed;
 }
