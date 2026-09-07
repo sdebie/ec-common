@@ -3,12 +3,16 @@ package org.ecommerce.common.util;
 import org.apache.commons.csv.CSVRecord;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public final class CsvImportUtils {
+
+    private static final Pattern IMAGE_FILE = Pattern.compile("(?i).+\\.(jpg|jpeg|png|webp|gif|avif)$");
 
     private CsvImportUtils() {
         // Utility class
@@ -43,10 +47,42 @@ public final class CsvImportUtils {
         if (isBlank(imagesValue)) {
             return List.of();
         }
-        return Arrays.stream(imagesValue.split(","))
-                .map(CsvImportUtils::normalizeStorageRelativePath)
-                .filter(Objects::nonNull)
-                .toList();
+
+        String[] naive = imagesValue.split(",", -1);
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+
+        for (int i = 0; i < naive.length; i++) {
+            if (!current.isEmpty()) {
+                current.append(',');
+            }
+            current.append(naive[i]);
+
+            boolean last = i == naive.length - 1;
+            boolean complete = isCompleteImagePath(current.toString());
+            boolean nextComplete = !last && isCompleteImagePath(naive[i + 1]);
+            if (complete && (last || nextComplete)) {
+                String normalized = normalizeStorageRelativePath(current.toString());
+                if (normalized != null) {
+                    result.add(normalized);
+                }
+                current.setLength(0);
+            }
+        }
+
+        if (!current.isEmpty()) {
+            String normalized = normalizeStorageRelativePath(current.toString());
+            if (normalized != null) {
+                result.add(normalized);
+            }
+        }
+
+        return List.copyOf(result);
+    }
+
+    private static boolean isCompleteImagePath(String value) {
+        String normalized = normalizeStorageRelativePath(value);
+        return normalized != null && IMAGE_FILE.matcher(normalized).matches();
     }
 
     /**
