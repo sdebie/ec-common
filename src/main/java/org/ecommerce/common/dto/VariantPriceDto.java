@@ -1,8 +1,10 @@
 package org.ecommerce.common.dto;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.microprofile.graphql.Description;
+import org.eclipse.microprofile.graphql.Ignore;
 import org.eclipse.microprofile.graphql.Type;
 
 import java.math.BigDecimal;
@@ -35,10 +37,17 @@ public class VariantPriceDto
     @Description("Whether this price is currently active based on date range")
     private Boolean isActive;
 
+    /** Computed; GraphQL output only (CVE-2026-76763 — do not map this to BigInteger input). */
+    @Setter(AccessLevel.NONE)
     @Description("Number of days remaining for sale prices (RETAIL_SALE_PRICE / WHOLESALE_SALE_PRICE); null for non-sale or no end date")
-    private Long saleDaysRemaining;
+    private Integer saleDaysRemaining;
 
     public VariantPriceDto() {
+    }
+
+    @Ignore
+    public void setSaleDaysRemaining(Integer saleDaysRemaining) {
+        this.saleDaysRemaining = saleDaysRemaining;
     }
 
 }
